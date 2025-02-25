@@ -87,7 +87,7 @@ spec:
           {{- end }}
           securityContext:
           {{ if eq .Values.PAAS_PLATFORM "Kubernetes" }}
-            runAsGroup: 10001
+            runAsGroup: 100
           {{ end }}
             readOnlyRootFilesystem: {{ .Values.READONLY_CONTAINER_FILE_SYSTEM_ENABLED }}
             runAsNonRoot: true
