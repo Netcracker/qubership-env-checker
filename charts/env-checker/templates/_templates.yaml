@@ -18,8 +18,8 @@
 - name: application-config
   mountPath: "/etc/config/application.properties"
 {{- end }}
----
 ...
+---
 {{- define "envchecker.pod.resources" }}
 requests:
   cpu: '{{ .Values.CPU_REQUEST | default "100m" }}'
