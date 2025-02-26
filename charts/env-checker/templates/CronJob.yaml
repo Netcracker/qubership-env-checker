@@ -1,4 +1,3 @@
-#Creation CronJob if ENVIRONMENT_CHECKER_CRON_JOB_COMMAND filled
 {{- if .Values.ENVIRONMENT_CHECKER_CRON_JOB_COMMAND }}
 kind: CronJob
 apiVersion: batch/v1

@@ -1,4 +1,4 @@
-{{ if not .Values.PRODUCTION_MODE }}
+{{- if not .Values.PRODUCTION_MODE }}
 kind: Service
 apiVersion: v1
 metadata:
@@ -26,4 +26,4 @@ spec:
     {{- end }}
   selector:
     name: '{{ .Values.SERVICE_NAME }}'
-{{ end }}
+{{- end }}

@@ -12,10 +12,14 @@
       key: access-token
 {{- end }}
 
+---
+
 {{- define "envchecker.pod.volumeMounts" }}
 - name: application-config
   mountPath: "/etc/config/application.properties"
 {{- end }}
+
+---
 
 {{- define "envchecker.pod.resources" }}
 requests:
@@ -25,6 +29,8 @@ limits:
   memory: '{{ .Values.MEMORY_LIMIT | default "2Gi" }}'
   cpu: '{{ .Values.CPU_LIMIT | default "1000m" }}'
 {{- end }}
+
+---
 
 {{- define "envchecker.pod.volumes" }}
 volumes:
