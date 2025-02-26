@@ -1,3 +1,4 @@
+---
 {{- define "envchecker.pod.env" }}
 - name: "CLOUD_NAME"
   value: '{{ .Values.CLOUD_NAME }}'
@@ -11,16 +12,14 @@
       name: env-checker-ui-access-token
       key: access-token
 {{- end }}
-
+...
 ---
-
 {{- define "envchecker.pod.volumeMounts" }}
 - name: application-config
   mountPath: "/etc/config/application.properties"
 {{- end }}
-
 ---
-
+...
 {{- define "envchecker.pod.resources" }}
 requests:
   cpu: '{{ .Values.CPU_REQUEST | default "100m" }}'
@@ -29,9 +28,8 @@ limits:
   memory: '{{ .Values.MEMORY_LIMIT | default "2Gi" }}'
   cpu: '{{ .Values.CPU_LIMIT | default "1000m" }}'
 {{- end }}
-
+...
 ---
-
 {{- define "envchecker.pod.volumes" }}
 volumes:
   - name: application-config
@@ -41,3 +39,4 @@ volumes:
         - key: "application.properties"
           path: "application.properties"
 {{- end }}
+...
