@@ -18,27 +18,27 @@ spec:
   revisionHistoryLimit: {{ .Values.RC_REVISIONS }}
   strategy:
     {{- if eq (default "" .Values.DEPLOYMENT_STRATEGY_TYPE) "recreate" }}
-      type: Recreate
+    type: Recreate
     {{- else if eq (default "" .Values.DEPLOYMENT_STRATEGY_TYPE) "best_effort_controlled_rollout" }}
-      type: RollingUpdate
-      rollingUpdate:
-        maxSurge: 0
-        maxUnavailable: 80%
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 80%
     {{- else if eq (default "" .Values.DEPLOYMENT_STRATEGY_TYPE) "ramped_slow_rollout" }}
-      type: RollingUpdate
-      rollingUpdate:
-        maxSurge: 1
-        maxUnavailable: 0
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
     {{- else if eq (default "" .Values.DEPLOYMENT_STRATEGY_TYPE) "custom_rollout" }}
-      type: RollingUpdate
-      rollingUpdate:
-        maxSurge: {{ .Values.DEPLOYMENT_STRATEGY_MAXSURGE | default "25%" }}
-        maxUnavailable: {{ .Values.DEPLOYMENT_STRATEGY_MAXUNAVAILABLE | default "25%" }}
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: {{ .Values.DEPLOYMENT_STRATEGY_MAXSURGE | default "25%" }}
+      maxUnavailable: {{ .Values.DEPLOYMENT_STRATEGY_MAXUNAVAILABLE | default "25%" }}
     {{- else }}
-      type: RollingUpdate
-      rollingUpdate:
-        maxSurge: 25%
-        maxUnavailable: 25%
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
     {{- end }}
   template:
     metadata:
@@ -86,9 +86,10 @@ spec:
             timeoutSeconds: 5
           {{- end }}
           securityContext:
-          {{ if eq .Values.PAAS_PLATFORM "Kubernetes" }}
+            {{ if eq .Values.PAAS_PLATFORM "Kubernetes" }}
+            runAsUser: 1000
             runAsGroup: 100
-          {{ end }}
+            {{ end }}
             readOnlyRootFilesystem: {{ .Values.READONLY_CONTAINER_FILE_SYSTEM_ENABLED }}
             runAsNonRoot: true
             seccompProfile:
@@ -97,7 +98,7 @@ spec:
             capabilities:
               drop:
                 - ALL
-       {{- include "envchecker.pod.volumes" . | nindent 6 }}
+      {{- include "envchecker.pod.volumes" . | nindent 6 }}
     {{ with .Values.NODE_SELECTOR_LABELS }}
     nodeSelector:
       {{ toYaml . | nindent 8 }}

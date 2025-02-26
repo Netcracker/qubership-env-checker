@@ -1,4 +1,3 @@
----
 {{- define "envchecker.pod.env" }}
 - name: "CLOUD_NAME"
   value: '{{ .Values.CLOUD_NAME }}'
@@ -12,6 +11,7 @@
       name: env-checker-ui-access-token
       key: access-token
 {{- end }}
+
 {{- define "envchecker.pod.volumeMounts" }}
 - name: application-config
   mountPath: "/etc/config/application.properties"
