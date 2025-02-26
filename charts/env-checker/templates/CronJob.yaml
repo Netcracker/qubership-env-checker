@@ -1,5 +1,5 @@
 ---
-{{- if .Values.ENVIRONMENT_CHECKER_CRON_JOB_COMMAND }}
+  {{- if .Values.ENVIRONMENT_CHECKER_CRON_JOB_COMMAND }}
 kind: CronJob
 apiVersion: batch/v1
 metadata:
@@ -37,5 +37,5 @@ spec:
         nodeSelector:
           {{ toYaml . | nindent 10 }}
         {{ end }}
-{{- end }}
-...
+
+  {{- end }}
