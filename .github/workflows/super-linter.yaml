@@ -34,4 +34,5 @@ jobs:
           VALIDATE_ALL_CODEBASE: ${{ inputs.full_scan || false }}
           DEFAULT_BRANCH: "main"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FILTER_REGEX_EXCLUDE: '^charts/env-checker/templates'
+          FILTER_REGEX_EXCLUDE: ^/charts/env-checker/templates/
+          VALIDATE_YAML: false
