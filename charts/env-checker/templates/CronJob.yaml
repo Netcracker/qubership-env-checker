@@ -33,8 +33,8 @@ spec:
               resources:
                 {{- include "envchecker.pod.resources" . | nindent 16 }}
           {{- include "envchecker.pod.volumes" . | nindent 10 }}
-        {{ with .Values.NODE_SELECTOR_LABELS }}
-        nodeSelector:
-          {{ toYaml . | nindent 10 }}
-        {{ end }}
+          {{ with .Values.NODE_SELECTOR_LABELS }}
+          nodeSelector:
+            {{ toYaml . | nindent 10 }}
+          {{ end }}
 {{- end }}

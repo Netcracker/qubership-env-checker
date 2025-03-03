@@ -70,7 +70,6 @@ spec:
             {{- include "envchecker.pod.volumeMounts" . | nindent 12 }}
           resources:
             {{- include "envchecker.pod.resources" . | nindent 12 }}
-          {{- if eq (default false .Values.ENVIRONMENT_CHECKER_SELF_CHECK_ENABLED) false }}
           readinessProbe:
             tcpSocket:
               port: web
@@ -83,7 +82,6 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 5
-          {{- end }}
           securityContext:
             {{ if eq .Values.PAAS_PLATFORM "Kubernetes" }}
             runAsUser: 1000
