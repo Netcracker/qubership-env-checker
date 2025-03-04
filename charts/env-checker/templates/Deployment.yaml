@@ -83,10 +83,10 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
           securityContext:
-            {{ if eq .Values.PAAS_PLATFORM "Kubernetes" }}
+            {{- if eq .Values.PAAS_PLATFORM "KUBERNETES" }}
             runAsUser: 1000
-            runAsGroup: 100
-            {{ end }}
+            runAsGroup: 1000
+            {{- end }}
             readOnlyRootFilesystem: {{ .Values.READONLY_CONTAINER_FILE_SYSTEM_ENABLED }}
             runAsNonRoot: true
             seccompProfile:
