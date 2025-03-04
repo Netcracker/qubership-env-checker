@@ -4,7 +4,7 @@ FROM $ROOT_CONTAINER
 LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
 ARG NB_USER="jovyan"
 ARG NB_UID="1000"
-ARG NB_GID="1000"
+ARG NB_GID="100"
 
 # Fix: https://github.com/hadolint/hadolint/wiki/DL4006
 # Fix: https://github.com/koalaman/shellcheck/wiki/SC3014
@@ -344,9 +344,14 @@ RUN mamba install --yes \
 RUN echo 'export PATH=/opt/conda/bin:$PATH' >> /home/jovyan/.bashrc
 RUN pip install opentelemetry-exporter-prometheus-remote-write
 
-# Set the owner and group for the directories.
 RUN chown -R ${NB_UID}:${NB_GID} /home/${NB_USER} && \
     chmod 1775 /home/${NB_USER} && \
+    find /home/${NB_USER} -type f -exec chmod 0444 {} \; && \
+    find /home/${NB_USER} -type d -exec chmod 0775 {} \;
+
+# Set permissions for 10001 User and 0 Group (openshift case)
+RUN chown -R 10001:0 /home/${NB_USER} && \
+    chmod 1775 /home/${NB_USER}  && \
     find /home/${NB_USER} -type f -exec chmod 0444 {} \; && \
     find /home/${NB_USER} -type d -exec chmod 0775 {} \;
 
