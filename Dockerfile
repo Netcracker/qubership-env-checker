@@ -344,14 +344,15 @@ RUN mamba install --yes \
 RUN echo 'export PATH=/opt/conda/bin:$PATH' >> /home/jovyan/.bashrc
 RUN pip install opentelemetry-exporter-prometheus-remote-write
 
+# Set permissions for default Group (k8s case)
 RUN chown ${NB_UID}:${NB_GID} /home/${NB_USER} && \
     chmod 1775 /home/${NB_USER} && \
     find /home/${NB_USER} -type f -exec chmod 0555 {} \; && \
     find /home/${NB_USER} -type d -exec chmod 0755 {} \;
 
-# Set permissions for 10001 User and 0 Group (openshift case)
-RUN chown 10001:0 /home/${NB_USER} && \
-    chmod 1775 /home/${NB_USER}  && \
+# Set permissions for 0 Group (openshift case)
+RUN chgrp 0 /home/${NB_USER} && \
+    chmod 1775 /home/${NB_USER} && \
     find /home/${NB_USER} -type f -exec chmod 0555 {} \; && \
     find /home/${NB_USER} -type d -exec chmod 0755 {} \;
 
