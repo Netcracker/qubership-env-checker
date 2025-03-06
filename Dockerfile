@@ -351,10 +351,8 @@ RUN chown ${NB_UID}:${NB_GID} /home/${NB_USER} && \
     find /home/${NB_USER} -type d -exec chmod 0755 {} \;
 
 # Set permissions for 0 Group (openshift case)
-RUN chgrp 0 /home/${NB_USER} && \
-    chmod 1775 /home/${NB_USER} && \
-    find /home/${NB_USER} -type f -exec chmod 0555 {} \; && \
-    find /home/${NB_USER} -type d -exec chmod 0755 {} \;
+RUN chgrp -R 0 /home/${NB_USER} && \
+    chmod -R g=u /home/${NB_USER}
 
 # Switch back to jovyan to avoid accidental container runs as root
 USER ${NB_UID}
