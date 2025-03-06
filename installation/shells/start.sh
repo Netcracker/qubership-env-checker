@@ -239,7 +239,7 @@ else
     # A misconfiguration occurs when the user modifies the default values of
     # NB_USER, NB_UID, or NB_GID, but we cannot update those values because we
     # are not root.
-    _log "INFO: Current configuration: NB_USER=\"${NB_USER}\", NB_UID=\"${NB_UID}\", NB_GID=\"${NB_GID}\"."
+    _log "INFO: Current configuration: {id -u}=\"${id -u}\", NB_UID=\"${NB_UID}\", NB_GID=\"${NB_GID}\"."
     if [[ "${NB_USER}" != "jovyan" && "${NB_USER}" != "$(id -un)" ]]; then
         _log "WARNING: container must be started as root to change the desired user's name with NB_USER=\"${NB_USER}\"!"
     fi
@@ -252,7 +252,7 @@ else
 
     # Warn if the user isn't able to write files to ${HOME}
     if [[ ! -w /home/jovyan ]]; then
-        _log "WARNING: no write access to /home/jovyan. Try starting the container with group 'users' (100), e.g. using \"--group-add=users\"."
+        _log "WARNING: no write access to /home/jovyan. Directory permissions: $(ls -ld /home/jovyan)"
     fi
 
     # NOTE: This hook is run as the user we started the container as!
