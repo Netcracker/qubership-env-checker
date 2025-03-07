@@ -1,6 +1,5 @@
-#Creation CronJob if ENVIRONMENT_CHECKER_CRON_JOB_COMMAND filled
----
 {{- if .Values.ENVIRONMENT_CHECKER_CRON_JOB_COMMAND }}
+---
 kind: CronJob
 apiVersion: batch/v1
 metadata:
@@ -24,7 +23,7 @@ spec:
           containers:
             - name: '{{ printf "%s-cronjob" .Values.SERVICE_NAME }}'
               image: {{ template "env-checker.image" . }}
-              command: [ "/bin/sh", "-c", "$(ENVIRONMENT_CHECKER_CRON_JOB_COMMAND)" ]
+              command: ["/bin/sh", "-c", "$(ENVIRONMENT_CHECKER_CRON_JOB_COMMAND)"]
               env:
                 - name: "ENVIRONMENT_CHECKER_CRON_JOB_COMMAND"
                   value: '{{ .Values.ENVIRONMENT_CHECKER_CRON_JOB_COMMAND }}'
@@ -34,9 +33,8 @@ spec:
               resources:
                 {{- include "envchecker.pod.resources" . | nindent 16 }}
           {{- include "envchecker.pod.volumes" . | nindent 10 }}
-        {{ with .Values.NODE_SELECTOR_LABELS }}
-        nodeSelector:
-          {{ toYaml . | nindent 10 }}
-        {{ end }}
-
+          {{ with .Values.NODE_SELECTOR_LABELS }}
+          nodeSelector:
+            {{ toYaml . | nindent 10 }}
+          {{ end }}
 {{- end }}
