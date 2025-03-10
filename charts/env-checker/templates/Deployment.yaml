@@ -58,9 +58,11 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      automountServiceAccountToken: false
       containers:
         - name: '{{ .Values.SERVICE_NAME }}'
           image: {{ template "env-checker.image" . }}
+          imagePullPolicy: Always
           ports:
             - name: web
               containerPort: 8888
