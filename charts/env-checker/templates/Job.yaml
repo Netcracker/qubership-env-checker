@@ -15,10 +15,13 @@ spec:
   template:
     spec:
       serviceAccountName: {{ .Values.serviceAccount.name }}
+      automountServiceAccountToken: false
       restartPolicy: Never
       containers:
         - name: '{{ printf "%s-job" .Values.SERVICE }}'
           image: {{ template "env-checker.image" . }}
+          securityContext:
+            runAsUser: 10001
           command: [ "/bin/sh", "-c", "$(ENVIRONMENT_CHECKER_JOB_COMMAND)" ]
           env:
             - name: "ENVIRONMENT_CHECKER_JOB_COMMAND"
