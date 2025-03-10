@@ -8,9 +8,9 @@ name: Lint Code Base
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "*" ]
   pull_request_target:
-    branches: [ "main" ]
+    branches: [ "*" ]
   workflow_dispatch:
     inputs:
       full_scan:

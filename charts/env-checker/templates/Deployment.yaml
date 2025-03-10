@@ -62,7 +62,9 @@ spec:
       containers:
         - name: '{{ .Values.SERVICE_NAME }}'
           image: {{ template "env-checker.image" . }}
-          imagePullPolicy: Always
+          securityContext:
+            runAsUser: 10001
+          imagePullPolicy: IfNotPresent
           ports:
             - name: web
               containerPort: 8888
