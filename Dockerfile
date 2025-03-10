@@ -1,7 +1,6 @@
-ARG ROOT_CONTAINER=debian:bullseye-slim
-FROM $ROOT_CONTAINER
-
+FROM debian:bullseye-slim
 LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
+
 ARG NB_USER="jovyan"
 ARG NB_UID="1000"
 ARG NB_GID="100"
@@ -33,8 +32,8 @@ ENV CONDA_DIR=/opt/conda \
     NB_GID=${NB_GID} \
     LC_ALL=en_US.UTF-8 \
     LANG=en_US.UTF-8 \
-    LANGUAGE=en_US.UTF-8
-ENV PATH="${CONDA_DIR}/bin:${PATH}" \
+    LANGUAGE=en_US.UTF-8 \
+    PATH="${CONDA_DIR}/bin:${PATH}" \
     HOME="/home/${NB_USER}"
 
 # Copy a script that we will use to correct permissions after running certain commands
@@ -43,8 +42,8 @@ RUN chmod a+rx /usr/local/bin/fix-permissions
 
 # Enable prompt color in the skeleton .bashrc before creating the default NB_USER, ignore=SC2016
 RUN sed -i 's/^#force_color_prompt=yes/force_color_prompt=yes/' /etc/skel/.bashrc && \
-   # Add call to conda init script see https://stackoverflow.com/a/58081608/4413446
-   echo 'eval "$(command conda shell.bash hook 2> /dev/null)"' >> /etc/skel/.bashrc
+    # Add call to conda init script see https://stackoverflow.com/a/58081608/4413446
+    echo 'eval "$(command conda shell.bash hook 2> /dev/null)"' >> /etc/skel/.bashrc
 
 # Create NB_USER with name jovyan user with UID=1000 and in the 'users' group
 # and make sure these dirs are writable by the `users` group.
@@ -167,7 +166,7 @@ WORKDIR "${HOME}"
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Download run-one file and upload to /tmp
-RUN wget -O /tmp/run-one_1.17.orig.tar.gz http://security.ubuntu.com/ubuntu/pool/main/r/run-one/run-one_1.17.orig.tar.gz
+RUN wget --progress=dot:giga -O /tmp/run-one_1.17.orig.tar.gz http://security.ubuntu.com/ubuntu/pool/main/r/run-one/run-one_1.17.orig.tar.gz
 # Unpack the file to /opt
 RUN tar --directory=/opt -xvf /tmp/run-one_1.17.orig.tar.gz
 # delete temp files
@@ -276,9 +275,10 @@ RUN wget https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_amd6
     chmod +x /usr/bin/yq && \
     rm yq_linux_amd64.tar.gz
 
-# update apt
-RUN apt -o Acquire::Check-Valid-Until=false update
-RUN apt install golang -y
+# update apt and install go. Uncomment if someday will need to write notebooks on golang
+# apt command is not recommended for installation from Dockerfile
+#RUN apt -o Acquire::Check-Valid-Until=false update
+#RUN apt install golang -y
 
 # Install additional packages
 RUN mamba install --yes \
@@ -343,7 +343,6 @@ RUN mamba install --yes \
 
 RUN echo 'export PATH=/opt/conda/bin:$PATH' >> /home/jovyan/.bashrc
 RUN pip install opentelemetry-exporter-prometheus-remote-write
-
 RUN chgrp -Rf root /home/$NB_USER && chmod -Rf g+w /home/$NB_USER
 
 # Switch back to jovyan to avoid accidental container runs as root
