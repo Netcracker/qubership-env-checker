@@ -1,7 +1,7 @@
 # qubership-env-checker
 
 The env-checker is an independent microservice designed to validate Kubernetes or OpenShift environments in the cloud.
-This is environment checker application based on jupyter-lab 3rd party. The service can be used to inspect
+This is environment checker application based on jupyter-lab third-party. The service can be used to inspect
 infrastructure, Kubernetes entities, labels, annotations, variables, and more. Based on the results of these checks,
 detailed reports are generated, which can be sent to storage or monitoring systems. These reports can then be used to
 identify and troubleshoot environment issues.

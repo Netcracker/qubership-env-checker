@@ -1,34 +1,34 @@
-#Service account of env-checker, that will be bound with cluster role
+# Service account of env-checker, that will be bound with cluster role
 serviceAccount:
   name: env-checker-sa
 
 # kubernetes secret name. Only pods which provide own keys can access the private registry.
 imagePullSecrets: []
 
-#Defines microservice name
+# Defines microservice name
 SERVICE_NAME: "env-checker"
 APPLICATION_NAME: "env-checker"
 MANAGED_BY: "saasDeployer"
-#The namespace it is going to be deployed.
+# The namespace it is going to be deployed.
 NAMESPACE: 'default'
-#Artifact descriptor version which is installed.
-ARTIFACT_DESCRIPTOR_VERSION : ''
-#IMAGE_REPOSITORY: 'ghcr.io/netcracker/qubership-env-checker'
-#TAG: 'main'
+# Artifact descriptor version which is installed.
+ARTIFACT_DESCRIPTOR_VERSION: ''
+# IMAGE_REPOSITORY: 'ghcr.io/netcracker/qubership-env-checker'
+# TAG: 'main'
 DELIMITER: "-"
 DEPLOYMENT_SESSION_ID: ''
 CLOUD_NAME: 'qubership'
 CSE_CLOUD: ''
 CSE_TENANT: ''
 READONLY_CONTAINER_FILE_SYSTEM_ENABLED: false
-#Jupyter lab access token value
+# Jupyter lab access token value
 ENVIRONMENT_CHECKER_UI_ACCESS_TOKEN: 'f9a3bd4e9f2c3be01cd629154cfb224c2703181e050254b5'
 
 # Specific env-check variables
 ENVIRONMENT_CHECKER_JOB_COMMAND: ''
 ENVIRONMENT_CHECKER_CRON_JOB_COMMAND: ''
 ENVIRONMENT_CHECKER_CRON_SCHEDULE: '0 0 */12 * *'
-#Parameters related to oauth proxy
+# Parameters related to oauth proxy
 OPS_IDP_URL: ''
 ENVCHECKER_KEYCLOACK_REALM: ''
 ENVCHECKER_KEYCLOACK_CLIENT_ID: ''

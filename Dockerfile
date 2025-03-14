@@ -1,7 +1,6 @@
-ARG ROOT_CONTAINER=debian:bullseye-slim
-FROM $ROOT_CONTAINER
-
+FROM debian:bullseye-slim
 LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
+
 ARG NB_USER="jovyan"
 ARG NB_UID="1000"
 ARG NB_GID="100"
@@ -15,12 +14,12 @@ USER root
 # Install all OS dependencies for notebook server that starts but lacks all features (e.g., download as all possible file formats)
 RUN apt-get update --yes && \
     apt-get install --yes --no-install-recommends \
-    bzip2 \
-    locales \
-    sudo \
-    tini \
-    wget \
-    ca-certificates && \
+    bzip2=1.0.8-4 \
+    locales=2.31-13+deb11u11 \
+    sudo=1.9.5p2-3+deb11u1 \
+    tini=0.19.0-1 \
+    wget=1.21-1+deb11u1 \
+    ca-certificates=20210119 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
     locale-gen
@@ -38,13 +37,13 @@ ENV PATH="${CONDA_DIR}/bin:${PATH}" \
     HOME="/home/${NB_USER}"
 
 # Copy a script that we will use to correct permissions after running certain commands
-COPY installation/shells/fix-permissions /usr/local/bin/fix-permissions
+COPY installation/shells/fix-permissions.sh /usr/local/bin/fix-permissions
 RUN chmod a+rx /usr/local/bin/fix-permissions
 
 # Enable prompt color in the skeleton .bashrc before creating the default NB_USER, ignore=SC2016
 RUN sed -i 's/^#force_color_prompt=yes/force_color_prompt=yes/' /etc/skel/.bashrc && \
-   # Add call to conda init script see https://stackoverflow.com/a/58081608/4413446
-   echo 'eval "$(command conda shell.bash hook 2> /dev/null)"' >> /etc/skel/.bashrc
+    # Add call to conda init script see https://stackoverflow.com/a/58081608/4413446
+    echo "eval \"\$(command conda shell.bash hook 2> /dev/null)\"" >> /etc/skel/.bashrc
 
 # Create NB_USER with name jovyan user with UID=1000 and in the 'users' group
 # and make sure these dirs are writable by the `users` group.
@@ -86,15 +85,13 @@ RUN set -x && \
     fi && \
     echo "Architecture: ${arch}" && \
     # Download micromamba.tar.bz2
-    wget --no-check-certificate -qO /tmp/micromamba.tar.bz2 https://github.com/mamba-org/micromamba-releases/releases/download/2.0.4-0/micromamba-linux-64.tar.bz2 && \
-    if [ $? -ne 0 ]; then \
+    if ! wget -qO /tmp/micromamba.tar.bz2 https://github.com/mamba-org/micromamba-releases/releases/download/2.0.4-0/micromamba-linux-64.tar.bz2; then \
         echo "Failed to download micromamba.tar.bz2"; \
         exit 1; \
     fi && \
     echo "Downloaded micromamba.tar.bz2 successfully" && \
     # Extract micromamba.tar.bz2
-    tar -xvjf /tmp/micromamba.tar.bz2 --strip-components=1 -C /tmp bin/micromamba && \
-    if [ $? -ne 0 ]; then \
+    if ! tar -xvjf /tmp/micromamba.tar.bz2 --strip-components=1 -C /tmp bin/micromamba; then \
         echo "Failed to extract micromamba.tar.bz2"; \
         exit 1; \
     fi && \
@@ -107,15 +104,14 @@ RUN set -x && \
     fi && \
     echo "PYTHON_SPECIFIER: ${PYTHON_SPECIFIER}" && \
     # Install packages with micromamba
-    /tmp/micromamba install \
+    if ! /tmp/micromamba install \
         --root-prefix="${CONDA_DIR}" \
         --prefix="${CONDA_DIR}" \
         --yes \
         "${PYTHON_SPECIFIER}" \
         'mamba' \
         'conda<23.9' \
-        'jupyter_core' && \
-    if [ $? -ne 0 ]; then \
+        'jupyter_core'; then \
         echo "Failed to install packages with micromamba"; \
         exit 1; \
     fi && \
@@ -123,8 +119,7 @@ RUN set -x && \
     # Cleanup
     rm /tmp/micromamba && \
     # Debugging: Check if mamba list python works
-    mamba list python > /tmp/mamba_list_python.txt && \
-    if [ $? -ne 0 ]; then \
+    if ! mamba list python > /tmp/mamba_list_python.txt; then \
         echo "Failed to list python packages with mamba"; \
         exit 1; \
     fi && \
@@ -133,28 +128,27 @@ RUN set -x && \
     echo "Content of /tmp/mamba_list_python.txt:" && \
     cat /tmp/mamba_list_python.txt && \
     # Debugging: Use awk to extract the python package line
-    awk '/^python[[:space:]]/ {print $1, $2}' /tmp/mamba_list_python.txt > /tmp/awk_python.txt && \
-    if [ $? -ne 0 ]; then \
+    if ! awk '/^python[[:space:]]/ {print $1, $2}' /tmp/mamba_list_python.txt > /tmp/awk_python.txt; then \
         echo "Failed to extract python packages with awk"; \
         exit 1; \
     fi && \
     echo "Extracted python packages successfully" && \
     # Write to pinned file
-    cat /tmp/awk_python.txt >> "${CONDA_DIR}/conda-meta/pinned" && \
-    if [ $? -ne 0 ]; then \
+    if ! cat /tmp/awk_python.txt >> "${CONDA_DIR}/conda-meta/pinned"; then \
         echo "Failed to write to ${CONDA_DIR}/conda-meta/pinned"; \
         exit 1; \
     fi && \
     echo "Wrote Python version to ${CONDA_DIR}/conda-meta/pinned successfully" && \
-    mamba clean --all -f -y && \
-    fix-permissions "${CONDA_DIR}" && \
-    if [ $? -ne 0 ]; then \
+    if ! mamba clean --all -f -y; then \
+        echo "Failed to clean mamba"; \
+        exit 1; \
+    fi && \
+    if ! fix-permissions "${CONDA_DIR}"; then \
         echo "Failed to fix permissions for ${CONDA_DIR}"; \
         exit 1; \
     fi && \
     echo "Fixed permissions for ${CONDA_DIR} successfully" && \
-    fix-permissions "/home/${NB_USER}" && \
-    if [ $? -ne 0 ]; then \
+    if ! fix-permissions "/home/${NB_USER}"; then \
         echo "Failed to fix permissions for /home/${NB_USER}"; \
         exit 1; \
     fi && \
@@ -167,40 +161,42 @@ WORKDIR "${HOME}"
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Download run-one file and upload to /tmp
-RUN wget -O /tmp/run-one_1.17.orig.tar.gz http://security.ubuntu.com/ubuntu/pool/main/r/run-one/run-one_1.17.orig.tar.gz
 # Unpack the file to /opt
-RUN tar --directory=/opt -xvf /tmp/run-one_1.17.orig.tar.gz
 # delete temp files
-RUN rm /tmp/run-one_1.17.orig.tar.gz
+# install opentelemetry exporter
+RUN wget --progress=dot:giga -O /tmp/run-one_1.17.orig.tar.gz http://security.ubuntu.com/ubuntu/pool/main/r/run-one/run-one_1.17.orig.tar.gz && \
+    tar --directory=/opt -xvf /tmp/run-one_1.17.orig.tar.gz && \
+    rm /tmp/run-one_1.17.orig.tar.gz && \
+    pip install --no-cache-dir opentelemetry-exporter-prometheus-remote-write==0.51b0
 
 # Install all OS dependencies for fully functional notebook server
 RUN apt-get -o Acquire::Check-Valid-Until=false update --yes && \
     apt-get install --yes --no-install-recommends \
-        fonts-liberation \
+        fonts-liberation=1:1.07.4-11 \
         # - pandoc is used to convert notebooks to html files
         #   it's not present in arch64 ubuntu image, so we install it here
-        pandoc \
+        pandoc=2.9.2.1-1+deb11u1 \
         # Common useful utilities
-        curl \
-        iputils-ping \
-        traceroute \
-        git \
-        nano-tiny \
-        tzdata \
-        unzip \
-        vim-tiny \
+        curl=7.74.0-1.3+deb11u14 \
+        iputils-ping=3:20210202-1 \
+        traceroute=1:2.1.0-2+deb11u1 \
+        git=1:2.30.2-1+deb11u2 \
+        nano-tiny=5.4-2+deb11u3 \
+        tzdata=2024b-0+deb11u1 \
+        unzip=6.0-26+deb11u1 \
+        vim-tiny=2:8.2.2434-3+deb11u1 \
         # git-over-ssh
-        openssh-client \
+        openssh-client=1:8.4p1-5+deb11u3 \
         # less is needed to run help in R
         # see: https://github.com/jupyter/docker-stacks/issues/1588
-        less \ 
+        less=551-2+deb11u2 \
         # nbconvert dependencies
         # https://nbconvert.readthedocs.io/en/latest/install.html#installing-tex
-        texlive-xetex \
-        texlive-fonts-recommended \
-        texlive-plain-generic \
+        texlive-xetex=2020.20210202-3 \
+        texlive-fonts-recommended=2020.20210202-3 \
+        texlive-plain-generic=2020.20210202-3 \
         # Enable clipboard on Linux host systems
-        xclip && \
+        xclip=0.13-2 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Jupyter Notebook, Lab, and Hub
@@ -264,21 +260,22 @@ WORKDIR "${HOME}"
 #    jupyter labextension disable --level=system "@jupyterlab/apputils-extension:announcements"
 
 # Download and install kubectl
-RUN curl -Lo kubectl-v1.32 https://dl.k8s.io/v1.32.0/bin/linux/amd64/kubectl && \
+RUN wget --progress=dot:giga -O kubectl-v1.32 https://dl.k8s.io/v1.32.0/bin/linux/amd64/kubectl && \
     chmod +x ./kubectl-v1.32 && \
     mv ./kubectl-v1.32 /usr/local/bin/ && \
     ln -s /usr/local/bin/kubectl-v1.32 /usr/local/bin/kubectl
 
 # Download and install yq
-RUN wget https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_amd64.tar.gz && \
+RUN wget --progress=dot:giga https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_amd64.tar.gz && \
     tar -xzvf yq_linux_amd64.tar.gz -C /usr/bin/ && \
     mv /usr/bin/yq_linux_amd64 /usr/bin/yq && \
     chmod +x /usr/bin/yq && \
     rm yq_linux_amd64.tar.gz
 
-# update apt
-RUN apt -o Acquire::Check-Valid-Until=false update
-RUN apt install golang -y
+# update apt and install go. Uncomment if someday will need to write notebooks on golang
+# apt command is not recommended for installation from Dockerfile
+#RUN apt -o Acquire::Check-Valid-Until=false update
+#RUN apt install golang -y
 
 # Install additional packages
 RUN mamba install --yes \
@@ -341,9 +338,7 @@ RUN mamba install --yes \
     fix-permissions "${CONDA_DIR}" && \
     fix-permissions "/home/${NB_USER}/"
 
-RUN echo 'export PATH=/opt/conda/bin:$PATH' >> /home/jovyan/.bashrc
-RUN pip install opentelemetry-exporter-prometheus-remote-write
-
+RUN echo "export PATH=/opt/conda/bin:\$PATH" >> /home/jovyan/.bashrc
 RUN chgrp -Rf root /home/$NB_USER && chmod -Rf g+w /home/$NB_USER
 
 # Switch back to jovyan to avoid accidental container runs as root

@@ -20,10 +20,16 @@ spec:
       template:
         spec:
           restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            runAsUser: 10001
           serviceAccountName: {{ .Values.serviceAccount.name }}
           containers:
             - name: '{{ printf "%s-cronjob" .Values.SERVICE_NAME }}'
               image: {{ template "env-checker.image" . }}
+              securityContext:
+                runAsNonRoot: true
+                readOnlyRootFilesystem: {{ .Values.READONLY_CONTAINER_FILE_SYSTEM_ENABLED }}
               command: [ "/bin/sh", "-c", "$(ENVIRONMENT_CHECKER_CRON_JOB_COMMAND)" ]
               env:
                 - name: "ENVIRONMENT_CHECKER_CRON_JOB_COMMAND"
@@ -38,5 +44,4 @@ spec:
         nodeSelector:
           {{ toYaml . | nindent 10 }}
         {{ end }}
-
 {{- end }}

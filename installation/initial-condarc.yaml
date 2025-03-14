@@ -1,10 +1,9 @@
 # Conda configuration see https://conda.io/projects/conda/en/latest/configuration.html
-
-auto_update_conda: false   #Disables automatic updates of Conda
-show_channel_urls: true    #Shows channel URLs when installing packages
-ssl_verify: true           #Disables SSL certificate verification
-verbosity: 2               #Sets the verbosity level of the output (2 is the most verbose)
+auto_update_conda: false # Disables automatic updates of Conda
+show_channel_urls: true # Shows channel URLs when installing packages
+ssl_verify: true # Disables SSL certificate verification
+verbosity: 2 # Sets the verbosity level of the output (2 is the most verbose)
 channel_priority: disabled
-channels:                  #Specifies the channels from which Conda will install packages
+channels: # Specifies the channels from which Conda will install packages
   - conda-forge
   - defaults

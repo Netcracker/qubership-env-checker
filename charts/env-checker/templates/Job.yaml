@@ -1,4 +1,3 @@
-#Creation in Job mode
 {{- if .Values.ENVIRONMENT_CHECKER_JOB_COMMAND }}
 kind: Job
 apiVersion: batch/v1
@@ -15,10 +14,16 @@ spec:
   template:
     spec:
       serviceAccountName: {{ .Values.serviceAccount.name }}
+      automountServiceAccountToken: false
+      securityContext:
+        runAsUser: 10001
       restartPolicy: Never
       containers:
         - name: '{{ printf "%s-job" .Values.SERVICE }}'
           image: {{ template "env-checker.image" . }}
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: {{ .Values.READONLY_CONTAINER_FILE_SYSTEM_ENABLED }}
           command: [ "/bin/sh", "-c", "$(ENVIRONMENT_CHECKER_JOB_COMMAND)" ]
           env:
             - name: "ENVIRONMENT_CHECKER_JOB_COMMAND"
