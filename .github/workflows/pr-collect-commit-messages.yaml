@@ -1,4 +1,5 @@
 ---
+
 name: "Add commit messages to PR body"
 
 on:
