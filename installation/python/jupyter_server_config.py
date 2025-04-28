@@ -34,6 +34,7 @@ c.Application.log_level = logging.DEBUG
 c.InlineBackend.figure_formats = {"png", "jpeg", "svg", "pdf"}
 # https://github.com/jupyter/notebook/issues/3130
 c.FileContentsManager.delete_to_trash = False
+c.LabApp.show_news = False
 
 # Generate a self-signed certificate
 OPENSSL_CONFIG = """\

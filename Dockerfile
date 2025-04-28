@@ -279,61 +279,61 @@ RUN wget --progress=dot:giga https://github.com/mikefarah/yq/releases/download/v
 
 # Install additional packages
 RUN mamba install --yes \
-    'yaml' \
-    'xlrd' \
-    'altair' \
-    'beautifulsoup4' \
-    'bokeh' \
-    'bottleneck' \
-    'cloudpickle' \
-    'blas' \
-    'aiohttp>=3.9.2' \
+	'aiohttp>=3.9.2' \
     'aiosmtplib' \
+	'altair' \
+	'beautifulsoup4' \
+	'blas' \
+    'bokeh' \
+	'boto3' \
+    'bottleneck' \
+	'cassandra-driver' \
+    'clickhouse-driver' \
+	'cloudpickle' \
     'cython' \
-    'dask' \
+	'dask' \
     'dill' \
-    'fonttools>=4.43.0' \
-    'urllib3>=2.0.6' \
-    'pyarrow>=14.0.1' \
-    'pillow>=10.2.0' \
-    'h5py' \
-    'prettytable' \
-    'papermill' \
-    'ipympl' \
+	'fonttools>=4.43.0' \
+	'h5py' \
+	'ipympl' \
     'ipywidgets' \
     'jupyter_server>=2.0.0' \
-    'matplotlib-base' \
+	'kafka-python' \
+	'matplotlib-base' \
     'numba' \
     'numexpr' \
-    'openpyxl' \
-    'pandas' \
+	'opentelemetry-api' \
+	'opentelemetry-sdk' \
+    'opentelemetry-semantic-conventions' \
+	'openpyxl' \
+	'pandas' \
+	'papermill' \
     'patsy' \
-    'protobuf' \
-    'pytables' \
-    'scikit-image' \
+	'pika' \
+	'pillow>=10.2.0' \
+	'prettytable' \
+	'protobuf' \
+    'psycopg2' \
+	'pyarrow>=14.0.1' \
+	'pymongo' \
+	'pypdf2' \
+	'pytables' \
+	'python-kubernetes' \
+	'python-snappy' \
+	'redis' \
+	'scikit-image' \
     'scikit-learn' \
     'scipy' \
+	'scrapbook' \
     'seaborn' \
     'sqlalchemy' \
     'statsmodels' \
     'sympy' \
+    'urllib3>=2.0.6' \
     'widgetsnbextension' \
-    'python-kubernetes' \
-    'papermill' \
-    'scrapbook' \
-    'pymongo' \
-    'pypdf2' \
-    'pika' \
-    'psycopg2' \
-    'kafka-python' \
-    'cassandra-driver' \
-    'clickhouse-driver' \
+	'xlrd' \
     'xlsxwriter' \
-    'python-snappy' \
-    'opentelemetry-sdk' \
-    'opentelemetry-semantic-conventions' \
-    'opentelemetry-api' \
-    'boto3' && \
+    'yaml' && \
     mamba clean --all -f -y && \
     fix-permissions "${CONDA_DIR}" && \
     fix-permissions "/home/${NB_USER}/"
