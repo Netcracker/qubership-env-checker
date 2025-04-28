@@ -166,8 +166,11 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # install opentelemetry exporter
 RUN wget --progress=dot:giga -O /tmp/run-one_1.17.orig.tar.gz http://security.ubuntu.com/ubuntu/pool/main/r/run-one/run-one_1.17.orig.tar.gz && \
     tar --directory=/opt -xvf /tmp/run-one_1.17.orig.tar.gz && \
-    rm /tmp/run-one_1.17.orig.tar.gz && \
-    pip install --no-cache-dir opentelemetry-exporter-prometheus-remote-write==0.51b0
+    rm /tmp/run-one_1.17.orig.tar.gz
+
+RUN pip install --no-cache-dir \
+  opentelemetry-exporter-prometheus-remote-write==0.51b0 \
+  redis==5.2.1
 
 # Install all OS dependencies for fully functional notebook server
 RUN apt-get -o Acquire::Check-Valid-Until=false update --yes && \
@@ -337,7 +340,6 @@ RUN mamba install --yes \
     fix-permissions "${CONDA_DIR}" && \
     fix-permissions "/home/${NB_USER}/"
 
-RUN pip install redis
 RUN echo "export PATH=/opt/conda/bin:\$PATH" >> /home/jovyan/.bashrc
 RUN chgrp -Rf root /home/$NB_USER && chmod -Rf g+w /home/$NB_USER
 
