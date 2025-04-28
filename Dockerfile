@@ -184,7 +184,7 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update --yes && \
         nano-tiny=5.4-2+deb11u3 \
         tzdata \
         unzip=6.0-26+deb11u1 \
-        vim-tiny=2:8.2.2434-3+deb11u1 \
+        vim-tiny \
         # git-over-ssh
         openssh-client=1:8.4p1-5+deb11u3 \
         # less is needed to run help in R
