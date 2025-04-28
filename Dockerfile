@@ -182,7 +182,7 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update --yes && \
         traceroute=1:2.1.0-2+deb11u1 \
         git=1:2.30.2-1+deb11u2 \
         nano-tiny=5.4-2+deb11u3 \
-        tzdata=2024b-0+deb11u1 \
+        tzdata \
         unzip=6.0-26+deb11u1 \
         vim-tiny=2:8.2.2434-3+deb11u1 \
         # git-over-ssh
