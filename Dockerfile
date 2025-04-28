@@ -169,8 +169,8 @@ RUN wget --progress=dot:giga -O /tmp/run-one_1.17.orig.tar.gz http://security.ub
     rm /tmp/run-one_1.17.orig.tar.gz
 
 RUN pip install --no-cache-dir \
-  opentelemetry-exporter-prometheus-remote-write==0.51b0 \
-  redis==5.2.1
+    opentelemetry-exporter-prometheus-remote-write==0.51b0 \
+    redis==5.2.1
 
 # Install all OS dependencies for fully functional notebook server
 RUN apt-get -o Acquire::Check-Valid-Until=false update --yes && \
