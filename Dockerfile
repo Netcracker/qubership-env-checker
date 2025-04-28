@@ -320,7 +320,6 @@ RUN mamba install --yes \
     'pytables' \
     'python-kubernetes' \
     'python-snappy' \
-    'redis' \
     'scikit-image' \
     'scikit-learn' \
     'scipy' \
@@ -338,6 +337,7 @@ RUN mamba install --yes \
     fix-permissions "${CONDA_DIR}" && \
     fix-permissions "/home/${NB_USER}/"
 
+RUN pip install redis
 RUN echo "export PATH=/opt/conda/bin:\$PATH" >> /home/jovyan/.bashrc
 RUN chgrp -Rf root /home/$NB_USER && chmod -Rf g+w /home/$NB_USER
 
@@ -346,3 +346,6 @@ USER ${NB_UID}
 
 # Add R mimetype option to specify how the plot returns from R to the browser
 COPY --chown=${NB_UID}:${NB_GID} installation/Rprofile.site /opt/conda/lib/R/etc/
+
+# Disable notifications for update Juputer Lab
+RUN jupyter labextension disable "@jupyterlab/apputils-extension:announcements"

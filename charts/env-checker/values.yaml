@@ -3,7 +3,8 @@ serviceAccount:
   name: env-checker-sa
 
 # kubernetes secret name. Only pods which provide own keys can access the private registry.
-imagePullSecrets: []
+imagePullSecrets:
+  - name: regcred
 
 # Defines microservice name
 SERVICE_NAME: "env-checker"
