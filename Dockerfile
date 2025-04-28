@@ -182,9 +182,9 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update --yes && \
         traceroute=1:2.1.0-2+deb11u1 \
         git=1:2.30.2-1+deb11u2 \
         nano-tiny=5.4-2+deb11u3 \
-        tzdata \
+        tzdata=2025b-0+deb11u1 \
         unzip=6.0-26+deb11u1 \
-        vim-tiny \
+        vim-tiny=2:8.2.2434-3+deb11u3 \
         # git-over-ssh
         openssh-client=1:8.4p1-5+deb11u3 \
         # less is needed to run help in R
@@ -279,59 +279,59 @@ RUN wget --progress=dot:giga https://github.com/mikefarah/yq/releases/download/v
 
 # Install additional packages
 RUN mamba install --yes \
-	'aiohttp>=3.9.2' \
+    'aiohttp>=3.9.2' \
     'aiosmtplib' \
-	'altair' \
-	'beautifulsoup4' \
-	'blas' \
+    'altair' \
+    'beautifulsoup4' \
+    'blas' \
     'bokeh' \
-	'boto3' \
+    'boto3' \
     'bottleneck' \
-	'cassandra-driver' \
+    'cassandra-driver' \
     'clickhouse-driver' \
-	'cloudpickle' \
+    'cloudpickle' \
     'cython' \
-	'dask' \
+    'dask' \
     'dill' \
-	'fonttools>=4.43.0' \
-	'h5py' \
-	'ipympl' \
+    'fonttools>=4.43.0' \
+    'h5py' \
+    'ipympl' \
     'ipywidgets' \
     'jupyter_server>=2.0.0' \
-	'kafka-python' \
-	'matplotlib-base' \
+    'kafka-python' \
+    'matplotlib-base' \
     'numba' \
     'numexpr' \
-	'opentelemetry-api' \
-	'opentelemetry-sdk' \
+    'opentelemetry-api' \
+    'opentelemetry-sdk' \
     'opentelemetry-semantic-conventions' \
-	'openpyxl' \
-	'pandas' \
-	'papermill' \
+    'openpyxl' \
+    'pandas' \
+    'papermill' \
     'patsy' \
-	'pika' \
-	'pillow>=10.2.0' \
-	'prettytable' \
-	'protobuf' \
+    'pika' \
+    'pillow>=10.2.0' \
+    'prettytable' \
+    'protobuf' \
     'psycopg2' \
-	'pyarrow>=14.0.1' \
-	'pymongo' \
-	'pypdf2' \
-	'pytables' \
-	'python-kubernetes' \
-	'python-snappy' \
-	'redis' \
-	'scikit-image' \
+    'pyarrow>=14.0.1' \
+    'pymongo' \
+    'pypdf2' \
+    'pytables' \
+    'python-kubernetes' \
+    'python-snappy' \
+    'redis' \
+    'scikit-image' \
     'scikit-learn' \
     'scipy' \
-	'scrapbook' \
+    'scrapbook' \
     'seaborn' \
     'sqlalchemy' \
     'statsmodels' \
     'sympy' \
     'urllib3>=2.0.6' \
     'widgetsnbextension' \
-	'xlrd' \
+    'xlrd' \
     'xlsxwriter' \
     'yaml' && \
     mamba clean --all -f -y && \
