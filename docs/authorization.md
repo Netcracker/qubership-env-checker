@@ -17,12 +17,12 @@ When OPS_IDP_URL exists and points to a valid IDP URL, the service assumes that 
 In addition to the filled in parameter OPS_IDP_URL, the following parameters must also be filled in for integration with
 IDP:
 
-| **Parameter**                      | **Value Example**                                                                                       | **Description**                                                                                                                                                |
-|------------------------------------|---------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| OPS_IDP_URL                        | [https://infra-keycloak.k8s.sdntest.qubership.org](https://github.com/Netcracker/qubership-env-checker) | URL to infra-keycloak. If IDP parameters are not defined then access to Env Checker is allowable via Jupiter default token                                     |
-| ENVCHECKER_KEYCLOACK_REALM         | test-realm                                                                                              | Name of IDP realm. User for Env-checker authentication have to belong to the realm                                                                             |
-| ENVCHECKER_KEYCLOACK_CLIENT_ID     | test-env-checker-client                                                                                 | IDP Client ID which have to belong to the realm. Client parameter in IDP 'Valid Redirect URIs' have to contain env-checker ingress URL                         |
-| ENVCHECKER_KEYCLOACK_CLIENT_SECRET | b4iwkh7nQBSxIgBEtlYSxUfNuoGZY19K                                                                        | IDP Client Secret. The value can be viewed in the Credentials tab on the idp client.\_If there is no Credentials tab. Set the Client authentication flag to ON |
+| **Parameter**                      | **Value Example**                | **Description**                                                                                                                                                |
+| ---------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OPS_IDP_URL                        | `https://keycloak.k8s.org`       | URL to keycloak. If IDP parameters are not defined then access to Env Checker is allowable via Jupiter default token                                           |
+| ENVCHECKER_KEYCLOACK_REALM         | test-realm                       | Name of IDP realm. User for Env-checker authentication have to belong to the realm                                                                             |
+| ENVCHECKER_KEYCLOACK_CLIENT_ID     | test-env-checker-client          | IDP Client ID which have to belong to the realm. Client parameter in IDP 'Valid Redirect URIs' have to contain env-checker ingress URL                         |
+| ENVCHECKER_KEYCLOACK_CLIENT_SECRET | b4iwkh7nQBSxIgBEtlYSxUfNuoGZY19K | IDP Client Secret. The value can be viewed in the Credentials tab on the idp client.\_If there is no Credentials tab. Set the Client authentication flag to ON |
 
 In case of using IDP integration, the standard Jupyter UI authorization page will not be displayed. Authorization will
 be considered successful immediately after passing in Keycloak authorization If integration with IDP is not configured,
