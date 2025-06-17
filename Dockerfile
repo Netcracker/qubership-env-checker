@@ -269,7 +269,7 @@ RUN wget --progress=dot:giga -O kubectl-v1.32 https://dl.k8s.io/v1.32.0/bin/linu
     ln -s /usr/local/bin/kubectl-v1.32 /usr/local/bin/kubectl
 
 # Download and install yq
-RUN wget --progress=dot:giga https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_amd64.tar.gz && \
+RUN wget --progress=dot:giga https://github.com/mikefarah/yq/releases/download/v4.45.4/yq_linux_amd64.tar.gz && \
     tar -xzvf yq_linux_amd64.tar.gz -C /usr/bin/ && \
     mv /usr/bin/yq_linux_amd64 /usr/bin/yq && \
     chmod +x /usr/bin/yq && \
