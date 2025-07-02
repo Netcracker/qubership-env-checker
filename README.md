@@ -64,6 +64,8 @@ helm upgrade --install qubership-env-checker \
     charts/env-checker
 ```
 
+For detailed installation instructions, hardware requirements, and advanced configuration, see the [Installation Guide](docs/InstallationGuide.md).
+
 ### Required RBAC Configuration
 
 ⚠️ **Security Considerations**: The env-checker requires cluster-wide `view` permissions to inspect Kubernetes resources across all namespaces. This is necessary for comprehensive environment validation but represents significant access. **Manual RBAC configuration is required** to ensure explicit authorization.
@@ -174,14 +176,3 @@ See also:
 
 - [Code of Conduct](CODE-OF-CONDUCT.md)
 - [Security Policy](SECURITY.md)
-
-## License
-
-This project is dual-licensed:
-
-- [Apache License 2.0](LICENSE-APACHE)
-- [MIT License](LICENSE)
-
----
-
-For detailed installation instructions, hardware requirements, and advanced configuration, see the [Installation Guide](docs/InstallationGuide.md).
