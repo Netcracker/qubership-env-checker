@@ -12,11 +12,29 @@ An independent microservice designed to validate Kubernetes or OpenShift environ
 - **Environment Validation**: Comprehensive validation of Kubernetes and OpenShift environments
 - **Infrastructure Inspection**: Analyze Kubernetes entities, labels, annotations, and variables
 - **Detailed Reporting**: Generate comprehensive reports for troubleshooting and monitoring
-- **Real-time Debugging**: Assist in debugging DEV and QA environments in real-time
-- **Jupyter Integration**: Web-based interface (JupyterLab + JupyterHub) for interactive environment analysis
-- **Flexible Deployment**: Support for standalone, Job, and CronJob execution modes
-- **Authentication Integration**: Optional Keycloak/IDP integration for secure access
+- **Flexible Deployment Modes**: Two distinct operational modes for different environments
+- **Real-time Debugging**: Interactive environment analysis through Jupyter-based interface
+- **Automated Execution**: Job-based execution for production environments
+- **Authentication Integration**: OAuth2/Keycloak integration for secure access in non-production
 - **Cloud-Native**: Designed specifically for cloud Kubernetes deployments
+
+## Deployment Modes
+
+The env-checker supports two operational modes:
+
+### 🔧 Non-Production Mode
+
+- **Interactive UI**: Full Jupyter interface (JupyterLab + JupyterHub) for real-time debugging
+- **OAuth2 Authentication**: Secure web access via Keycloak/IDP integration
+- **Architecture**: `OAuth2 Proxy` → `Ingress` → `Service` → `Env-Checker Pod`
+
+### 🔒 Production Mode
+
+- **Job-based Execution**: Automated validation via Kubernetes Jobs/CronJobs
+- **No UI Access**: No web interface or interactive components
+- **Architecture**: `Kubernetes Job` → `Env-Checker Pod`
+
+> **⚠️ Security**: Different modes exist because env-checker requires cluster-wide `view` permissions. Production mode eliminates interactive access.
 
 ## Requirements
 
@@ -32,19 +50,23 @@ An independent microservice designed to validate Kubernetes or OpenShift environ
 
 ### Quick Start
 
-Deploy env-checker to your Kubernetes cluster using Helm:
-
 ```bash
-# Create namespace and deploy
+# Non-Production Mode (with UI without Ingress)
 helm upgrade --install qubership-env-checker \
-    --namespace=env-checker \
-    --create-namespace \
-    --set NAMESPACE=env-checker \
-    --set CLOUD_PUBLIC_HOST=your-cluster-domain.com \
+    --namespace=env-checker --create-namespace \
+    charts/env-checker
+
+# Production Mode (Job-only)  
+helm upgrade --install qubership-env-checker \
+    --namespace=env-checker --create-namespace \
+    --set PRODUCTION_MODE=true \
+    --set ENVIRONMENT_CHECKER_JOB_COMMAND="python /scripts/validate.py" \
     charts/env-checker
 ```
 
 ### Required RBAC Configuration
+
+⚠️ **Security Considerations**: The env-checker requires cluster-wide `view` permissions to inspect Kubernetes resources across all namespaces. This is necessary for comprehensive environment validation but represents significant access. **Manual RBAC configuration is required** to ensure explicit authorization.
 
 Create the necessary ClusterRoleBinding for the service account:
 
@@ -63,83 +85,33 @@ roleRef:
   name: view
 ```
 
-### Access the UI
-
-**Port Forwarding:**
-
-```bash
-# Without OAuth2 (default)
-kubectl port-forward svc/env-checker 8888:8888 -n env-checker
-
-# With OAuth2 (if OPS_IDP_URL is configured)
-kubectl port-forward svc/env-checker 8080:8080 -n env-checker
-```
-
-Then access: <http://localhost:8888> (without OAuth2) or <http://localhost:8080> (with OAuth2)
-
-**Via Ingress:** Access through configured ingress URL using the token set via `ENVIRONMENT_CHECKER_UI_ACCESS_TOKEN` parameter
+> **Why such broad permissions?** The env-checker needs to validate infrastructure components, inspect labels/annotations on resources across namespaces, analyze network policies, check resource quotas, and examine cluster-wide configurations. The `view` ClusterRole provides read-only access to most Kubernetes resources cluster-wide.
 
 ## Usage
 
-### Interactive Mode
+**Non-Production Mode**: Access Jupyter UI via browser, create/run notebooks interactively
+**Production Mode**: Pre-built validation scripts run as Kubernetes Jobs/CronJobs
 
-Access the Jupyter interface through the web UI to run environment checks interactively. The service provides both JupyterLab and JupyterHub functionality.
-
-### Job Mode
-
-Execute one-time environment checks:
+**Access UI** (Non-Production only):
 
 ```bash
-helm upgrade qubership-env-checker charts/env-checker \
-    --set ENVIRONMENT_CHECKER_JOB_COMMAND="your-custom-command-here"
+kubectl port-forward svc/env-checker 8888:8888 -n env-checker
+# Then open http://localhost:8888
 ```
-
-### CronJob Mode
-
-Schedule recurring environment validations:
-
-```bash
-helm upgrade qubership-env-checker charts/env-checker \
-    --set ENVIRONMENT_CHECKER_CRON_JOB_COMMAND="your-custom-command-here" \
-    --set ENVIRONMENT_CHECKER_CRON_SCHEDULE="0 */1 * * *"
-```
-
-> **Note**: Create your own notebooks and scripts in the Jupyter interface to define environment checks. No pre-defined notebooks are included in the repository.
 
 ## Configuration
 
-### Essential Parameters
+| Parameter | Mode | Mandatory | Default | Description |
+|-----------|------|-----------|---------|-------------|
+| `PRODUCTION_MODE` | Both | No | `false` | Controls deployment mode |
+| `CLOUD_PUBLIC_HOST` | Non-Prod | No | `qubership` | Public host for Ingress (set real domain if using Ingress) |
+| `OPS_IDP_URL` | Non-Prod | No | - | Keycloak URL (enables OAuth2) |
+| `ENVCHECKER_KEYCLOACK_*` | Non-Prod | No | - | Keycloak credentials (required if OAuth2 enabled) |
+| `ENVIRONMENT_CHECKER_UI_ACCESS_TOKEN` | Non-Prod | No | *auto* | UI access token |
+| `ENVIRONMENT_CHECKER_JOB_COMMAND` | Prod | Yes | - | Job execution command |
+| `ENVIRONMENT_CHECKER_CRON_*` | Prod | No | - | CronJob settings |
 
-| Parameter | Required | Default | Description |
-|-----------|----------|---------|-------------|
-| `CLOUD_PUBLIC_HOST` | **Mandatory** | `qubership` | Public host for Kubernetes elements like Ingress |
-| `NAMESPACE` | **Mandatory** | `default` | Target namespace for deployment |
-| `SERVICE_NAME` | Optional | `env-checker` | Microservice name |
-| `APPLICATION_NAME` | Optional | `env-checker` | Application name for labeling |
-| `ENVIRONMENT_CHECKER_UI_ACCESS_TOKEN` | Optional | - | UI access token (if not set, random token generated) |
-
-### Job/CronJob Parameters
-
-| Parameter | Required | Default | Description |
-|-----------|----------|---------|-------------|
-| `ENVIRONMENT_CHECKER_JOB_COMMAND` | Optional | - | Command for one-time job execution |
-| `ENVIRONMENT_CHECKER_CRON_JOB_COMMAND` | Optional | - | Command for scheduled execution |
-| `ENVIRONMENT_CHECKER_CRON_SCHEDULE` | Optional | `0 0 */12 * *` | Cron schedule for recurring jobs |
-
-### Authentication Parameters (Optional)
-
-| Parameter | Description |
-|-----------|-------------|
-| `OPS_IDP_URL` | Keycloak URL for IDP integration |
-| `ENVCHECKER_KEYCLOACK_REALM` | IDP realm name |
-| `ENVCHECKER_KEYCLOACK_CLIENT_ID` | IDP client ID |
-| `ENVCHECKER_KEYCLOACK_CLIENT_SECRET` | IDP client secret |
-
-### Security Parameters
-
-| Parameter | Required | Default | Description |
-|-----------|----------|---------|-------------|
-| `READONLY_CONTAINER_FILE_SYSTEM_ENABLED` | Optional | `false` | Enable read-only container filesystem |
+> **Note**: Namespace is set via `--namespace`, not `--set NAMESPACE`
 
 ### OpenShift Configuration
 
@@ -158,49 +130,41 @@ The env-checker utilizes the Jupyter Server API (v2.0+) without extensions. For 
 
 ## Architecture
 
-### System Overview
-
 ```mermaid
 flowchart TB
-    A([User]) --> B[Env-Checker<br/>Jupyter UI]
-    B --> C[(Kubernetes API)]
-    B --> D[Environment<br/>Analysis]
-    B --> F[User Notebooks<br/>& Scripts]
+    subgraph "Non-Production Mode"
+        A([User]) --> B[OAuth2 Proxy]
+        B --> C[Ingress]  
+        C --> D[Service]
+        D --> E[Env-Checker Pod<br/>Jupyter UI]
+        E --> F[(Kubernetes API)]
+    end
     
-    F --> D
-    D --> E[(Reports)]
+    subgraph "Production Mode"
+        I[Kubernetes Job] --> J[Env-Checker Pod<br/>Headless]
+        J --> K[(Kubernetes API)]
+    end
+    
+    F --> N[(Environment Resources)]
+    K --> N
 ```
-
-The env-checker operates as a containerized microservice within Kubernetes, providing:
-
-- **Web Interface**: Jupyter-based UI (JupyterLab + JupyterHub) for interactive environment analysis
-- **Kubernetes Integration**: Direct API access via service account with cluster-wide view permissions  
-- **Flexible Execution**: Support for interactive, job-based, and scheduled execution modes
-- **Reporting Pipeline**: Automated report generation and distribution to monitoring systems
 
 ## Testing
 
-### Sanity Check
-
-1. Access the env-checker UI via ingress or port-forwarding
-2. Log in using the configured access token
-3. Verify UI availability and basic functionality
-
-### Smoke Test
-
-Verify Kubernetes API access from within the Jupyter terminal:
+**Verify deployment:**
 
 ```bash
-kubectl get ns
+kubectl get pods -n env-checker
+kubectl logs -l app.kubernetes.io/name=env-checker -n env-checker
 ```
 
-**Note**: If this command fails, verify:
+**Test API access:**
 
-1. The ClusterRoleBinding configuration
-2. Service account token mounting (check `automountServiceAccountToken` setting)
-3. Pod security context and RBAC permissions
+```bash
+kubectl exec -it deployment/env-checker -n env-checker -- kubectl get ns
+```
 
-For comprehensive testing procedures, see the [Installation Guide](docs/InstallationGuide.md#tests).
+**Troubleshooting**: If kubectl fails, verify ClusterRoleBinding and RBAC permissions. See [Installation Guide](docs/InstallationGuide.md#tests) for details.
 
 ## Contributing
 
