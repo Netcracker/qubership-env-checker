@@ -1,4 +1,4 @@
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
 
 ARG NB_USER="jovyan"
@@ -14,12 +14,12 @@ USER root
 # Install all OS dependencies for notebook server that starts but lacks all features (e.g., download as all possible file formats)
 RUN apt-get update --yes && \
     apt-get install --yes --no-install-recommends \
-    bzip2=1.0.8-4 \
-    locales=2.31-13+deb11u11 \
-    sudo=1.9.5p2-3+deb11u1 \
-    tini=0.19.0-1 \
-    wget=1.21-1+deb11u1 \
-    ca-certificates=20210119 && \
+    bzip2 \
+    locales \
+    sudo \
+    tini \
+    wget \
+    ca-certificates && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
     locale-gen
@@ -169,37 +169,37 @@ RUN wget --progress=dot:giga -O /tmp/run-one_1.17.orig.tar.gz http://security.ub
     rm /tmp/run-one_1.17.orig.tar.gz
 
 RUN pip install --no-cache-dir \
-    opentelemetry-exporter-prometheus-remote-write==0.51b0 \
-    redis==5.2.1
+    opentelemetry-exporter-prometheus-remote-write \
+    redis
 
 # Install all OS dependencies for fully functional notebook server
 RUN apt-get -o Acquire::Check-Valid-Until=false update --yes && \
     apt-get install --yes --no-install-recommends \
-        fonts-liberation=1:1.07.4-11 \
+        fonts-liberation \
         # - pandoc is used to convert notebooks to html files
         #   it's not present in arch64 ubuntu image, so we install it here
-        pandoc=2.9.2.1-1+deb11u1 \
+        pandoc \
         # Common useful utilities
-        curl=7.74.0-1.3+deb11u14 \
-        iputils-ping=3:20210202-1 \
-        traceroute=1:2.1.0-2+deb11u1 \
-        git=1:2.30.2-1+deb11u2 \
-        nano-tiny=5.4-2+deb11u3 \
-        tzdata=2025b-0+deb11u1 \
-        unzip=6.0-26+deb11u1 \
-        vim-tiny=2:8.2.2434-3+deb11u3 \
+        curl \
+        iputils-ping \
+        traceroute \
+        git \
+        nano-tiny \
+        tzdata \
+        unzip \
+        vim-tiny \
         # git-over-ssh
-        openssh-client=1:8.4p1-5+deb11u3 \
+        openssh-client \
         # less is needed to run help in R
         # see: https://github.com/jupyter/docker-stacks/issues/1588
-        less=551-2+deb11u2 \
+        less \
         # nbconvert dependencies
         # https://nbconvert.readthedocs.io/en/latest/install.html#installing-tex
-        texlive-xetex=2020.20210202-3 \
-        texlive-fonts-recommended=2020.20210202-3 \
-        texlive-plain-generic=2020.20210202-3 \
+        texlive-xetex \
+        texlive-fonts-recommended \
+        texlive-plain-generic \
         # Enable clipboard on Linux host systems
-        xclip=0.13-2 && \
+        xclip && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Jupyter Notebook, Lab, and Hub
@@ -212,10 +212,10 @@ WORKDIR /tmp
 RUN mamba install --yes \
         'traitlets<5.10' \
         'notebook' \
-        'jupyterlab-lsp=5.1.0' \
-        'jupyter-lsp=2.2.5' \
-        'jupyterhub=5.1.0' \
-        'jupyterlab=4.2.4' \
+        'jupyterlab-lsp=5.2.0' \
+        'jupyter-lsp=2.2.6' \
+        'jupyterhub=5.3.0' \
+        'jupyterlab=4.4.5' \
     && \
     jupyter notebook --generate-config && \
     mamba clean --all -f -y && \
@@ -269,7 +269,7 @@ RUN wget --progress=dot:giga -O kubectl-v1.32 https://dl.k8s.io/v1.32.0/bin/linu
     ln -s /usr/local/bin/kubectl-v1.32 /usr/local/bin/kubectl
 
 # Download and install yq
-RUN wget --progress=dot:giga https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_amd64.tar.gz && \
+RUN wget --progress=dot:giga https://github.com/mikefarah/yq/releases/download/v4.45.4/yq_linux_amd64.tar.gz && \
     tar -xzvf yq_linux_amd64.tar.gz -C /usr/bin/ && \
     mv /usr/bin/yq_linux_amd64 /usr/bin/yq && \
     chmod +x /usr/bin/yq && \
