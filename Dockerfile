@@ -212,10 +212,10 @@ WORKDIR /tmp
 RUN mamba install --yes \
         'traitlets<5.10' \
         'notebook' \
-        'jupyterlab-lsp=5.1.0' \
-        'jupyter-lsp=2.2.5' \
-        'jupyterhub=5.1.0' \
-        'jupyterlab=4.2.4' \
+        'jupyterlab-lsp=5.2.0' \
+        'jupyter-lsp=2.2.6' \
+        'jupyterhub=5.3.0' \
+        'jupyterlab=4.4.5' \
     && \
     jupyter notebook --generate-config && \
     mamba clean --all -f -y && \
