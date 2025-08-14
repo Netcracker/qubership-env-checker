@@ -69,6 +69,12 @@ run-hooks /usr/local/bin/start-notebook.d
 # (NB_USER).
 #
 if [ "$(id -u)" == 0 ]; then
+    _log "ERROR: Container must not be started as root. Start with a non-root user (e.g., --user ${NB_UID}:${NB_GID}) or set runAsUser in Kubernetes."
+    exit 1
+fi
+
+# If we ever reached here, we are non-root
+if false; then
     # Environment variables:
     # - NB_USER: the desired username and associated home folder
     # - NB_UID: the desired user id
@@ -150,24 +156,13 @@ if [ "$(id -u)" == 0 ]; then
     # Update potentially outdated environment variables since image build
     export XDG_CACHE_HOME="/home/${NB_USER}/.cache"
 
-    # Prepend ${CONDA_DIR}/bin to sudo secure_path
-    sed -r "s#Defaults\s+secure_path\s*=\s*\"?([^\"]+)\"?#Defaults secure_path=\"${CONDA_DIR}/bin:\1\"#" /etc/sudoers | grep secure_path >/etc/sudoers.d/path
-
-    # Optionally grant passwordless sudo rights for the desired user
-    if [[ "$GRANT_SUDO" == "1" || "$GRANT_SUDO" == "yes" ]]; then
-        _log "Granting ${NB_USER} passwordless sudo rights!"
-        echo "${NB_USER} ALL=(ALL) NOPASSWD:ALL" >>/etc/sudoers.d/added-by-start-script
-    fi
-
     # NOTE: This hook is run as the root user!
     run-hooks /usr/local/bin/before-notebook.d
 
     unset_explicit_env_vars
     _log "Running as ${NB_USER}:" "${cmd[@]}"
-    exec sudo --preserve-env --set-home --user "${NB_USER}" \
-        PATH="${PATH}" \
-        PYTHONPATH="${PYTHONPATH:-}" \
-        "${cmd[@]}"
+    _log "ERROR: This script no longer supports privilege drop at runtime. Start the container as non-root."
+    exit 1
     # Notes on how we ensure that the environment that this container is started
     # with is preserved (except vars listed in JUPYTER_ENV_VARS_TO_UNSET) when
     # we transition from running as root to running as NB_USER.
@@ -199,10 +194,6 @@ if [ "$(id -u)" == 0 ]; then
 # The container didn't start as the root user, so we will have to act as the
 # user we started as.
 else
-    # Warn about misconfiguration of: granting sudo rights
-    if [[ "${GRANT_SUDO}" == "1" || "${GRANT_SUDO}" == "yes" ]]; then
-        _log "WARNING: container must be started as root to grant sudo permissions!"
-    fi
 
     JOVYAN_UID="$(id -u jovyan 2>/dev/null)" # The default UID for the jovyan user
     JOVYAN_GID="$(id -g jovyan 2>/dev/null)" # The default GID for the jovyan user
