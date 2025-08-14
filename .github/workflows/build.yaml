@@ -8,6 +8,12 @@ on:
     paths-ignore:
       - '.github/**'
       - 'docs/**'
+  workflow_dispatch:
+    inputs:
+      postfix:
+        description: 'Postfix for tag name'
+        required: false
+
 env:
   TAG_NAME: ${{ github.event.release.tag_name || (github.ref == 'refs/heads/main' && 'main' || ( inputs.postfix != '' && format('{0}-{1}', github.ref, inputs.postfix) || 'none' )) }}
 
@@ -19,6 +25,7 @@ jobs:
         component:
           - name: qubership-env-checker
             file: Dockerfile
+            context: .
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
