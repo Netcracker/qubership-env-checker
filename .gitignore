@@ -7,3 +7,5 @@
 target
 *.log
 **/__pycache__/*
+**/.vscode/*
+*.pyc

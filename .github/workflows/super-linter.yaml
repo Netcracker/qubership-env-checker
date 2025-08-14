@@ -1,4 +1,3 @@
----
 # This workflow executes several linters on changed files based on languages used in your code base whenever
 # you push a code or open a pull request.
 #
@@ -29,24 +28,7 @@ permissions:
   contents: read
 
 jobs:
-  prepare-configs:
-    runs-on: ubuntu-latest
-    steps:
-    - name: "Get the common linters configuration"
-      uses: actions/checkout@v4
-      with:
-        ref: main # fix/superlinter-config
-        repository: netcracker/.github
-        sparse-checkout: |
-          config/linters
-    - name: "Upload the common linters configsuration"
-      uses: actions/upload-artifact@v4
-      with:
-        name: linter-config
-        path: "${{ github.workspace }}/config"
-        include-hidden-files: true
   run-lint:
-    needs: [prepare-configs]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -54,41 +36,40 @@ jobs:
       # To report GitHub Actions status checks
       statuses: write
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        # Full git history is needed to get a proper list of changed files within `super-linter`
-        fetch-depth: 0
-    - name: "Get the common linters configuration"
-      uses: actions/download-artifact@v4
-      id: download
-      with:
-        name: linter-config
-        path: /tmp/linter-config
-    - name: "Apply the common linters configuration"
-      if: ${{ steps.download.outputs.download-path != '' }}
-      run: |
-        mkdir -p ./.github/linters
-        cp --update=none -vR /tmp/linter-config/linters/* ./.github/linters
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          # Full git history is needed to get a proper list of changed files within `super-linter`
+          fetch-depth: 0
 
-    - name: "Load super-linter environment file"
-      shell: bash
-      run: |
-        # shellcheck disable=2086
-        if [ -f "${GITHUB_WORKSPACE}/.github/super-linter.env" ]; then
-          echo "Applying local linter environment:"
-          grep "\S" ${GITHUB_WORKSPACE}/.github/super-linter.env | grep -v "^#"
-          grep "\S" ${GITHUB_WORKSPACE}/.github/super-linter.env | grep -v "^#" >> $GITHUB_ENV
-        elif [ -f "/tmp/linter-config/linters/super-linter.env" ]; then
-          echo "::warning:: Local linter environment file .github/super-linter.env is not found"
-          echo "Applying common linter environment:"
-          grep "\S" /tmp/linter-config/linters/super-linter.env | grep -v "^#"
-          grep "\S" /tmp/linter-config/linters/super-linter.env | grep -v "^#" >> $GITHUB_ENV
-        fi
+      - name: "Get the common linters configuration"
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: main # fix/superlinter-config
+          repository: netcracker/.github
+          path: netcracker.github/
+          sparse-checkout: |
+            config/linters
 
-    - name: Lint Code Base
-      uses: super-linter/super-linter/slim@v8.0.0
-      env:
-        VALIDATE_ALL_CODEBASE: ${{ inputs.full_scan || false }}
-        # To report GitHub Actions status checks
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: "Apply the common linters configuration"
+        run: |
+          ls -l netcracker.github/config/linters
+          mkdir -p .github/linters
+          cp --update=none -vR netcracker.github/config/linters/ .github/
+          rm -rf netcracker.github/
+
+      - name: "Load super-linter environment file"
+        shell: bash
+        # language=bash
+        run: |
+          # The grep is need here because GitHub Actions will not accept comments.
+          # We need to skip blank lines as GitHub Actions might fail to process them as well
+          cat .github/linters/super-linter.env .github/super-linter.env | grep -v '^#' | grep -vE '^\s*$' >> "$GITHUB_ENV" || true
+
+      - name: Lint Code Base
+        uses: super-linter/super-linter/slim@5119dcd8011e92182ce8219d9e9efc82f16fddb6 # v8.0.0
+        env:
+          VALIDATE_ALL_CODEBASE: ${{ inputs.full_scan || false }}
+          # To report GitHub Actions status checks
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BRANCH: ${{ github.event.pull_request.base.ref }}
