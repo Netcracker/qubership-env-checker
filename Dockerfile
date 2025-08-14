@@ -318,7 +318,6 @@ RUN mamba install --yes \
     'pika' \
     'pillow>=10.2.0' \
     'prettytable' \
-    'protobuf' \
     'psycopg2' \
     'pyarrow>=14.0.1' \
     'pymongo' \
