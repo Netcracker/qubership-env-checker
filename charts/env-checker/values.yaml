@@ -1,6 +1,8 @@
 # Service account of env-checker, that will be bound with cluster role
 serviceAccount:
   name: env-checker-sa
+  # Enable mounting service account token for kubectl access
+  automountToken: true
 
 # kubernetes secret name. Only pods which provide own keys can access the private registry.
 imagePullSecrets: []
