@@ -16,7 +16,6 @@ RUN apt-get update --yes && \
     apt-get install --yes --no-install-recommends \
     bzip2 \
     locales \
-    sudo \
     tini \
     wget \
     ca-certificates && \
@@ -48,8 +47,6 @@ RUN sed -i 's/^#force_color_prompt=yes/force_color_prompt=yes/' /etc/skel/.bashr
 # Create NB_USER with name jovyan user with UID=1000 and in the 'users' group
 # and make sure these dirs are writable by the `users` group.
 RUN echo "auth requisite pam_deny.so" >> /etc/pam.d/su && \
-    sed -i.bak -e 's/^%admin/#%admin/' /etc/sudoers && \
-    sed -i.bak -e 's/^%sudo/#%sudo/' /etc/sudoers && \
     useradd -l -m -s /bin/bash -N -u "${NB_UID}" "${NB_USER}" && \
     mkdir -p "${CONDA_DIR}" && \
     chown "${NB_USER}:${NB_GID}" "${CONDA_DIR}" && \
@@ -241,7 +238,7 @@ COPY installation/python/jupyter_server_config.py installation/python/docker_hea
 RUN chmod +x /usr/local/bin/start-notebook.sh && \
     chmod +x /usr/local/bin/start.sh
 
-#debug for get jupiterlab --version
+# debug: print jupyter lab version
 RUN jupyter lab --version
 
 # Configure container startup
@@ -253,7 +250,7 @@ RUN sed -re "s/c.ServerApp/c.NotebookApp/g" \
     fix-permissions /etc/jupyter/
 
 # HEALTHCHECK documentation: https://docs.docker.com/engine/reference/builder/#healthcheck
-# This healtcheck works well for `lab`, `notebook`, `nbclassic`, `server` and `retro` jupyter commands
+# This healthcheck works well for `lab`, `notebook`, `nbclassic`, `server`, and `retro` Jupyter commands
 # https://github.com/jupyter/docker-stacks/issues/915#issuecomment-1068528799
 HEALTHCHECK --interval=5s --timeout=3s --start-period=5s --retries=3 \
     CMD /etc/jupyter/docker_healthcheck.py || exit 1
@@ -351,5 +348,5 @@ USER ${NB_UID}
 # Add R mimetype option to specify how the plot returns from R to the browser
 COPY --chown=${NB_UID}:${NB_GID} installation/Rprofile.site /opt/conda/lib/R/etc/
 
-# Disable notifications for update Juputer Lab
+# Disable notifications for JupyterLab update notifications
 RUN jupyter labextension disable "@jupyterlab/apputils-extension:announcements"
