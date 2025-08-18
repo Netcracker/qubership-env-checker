@@ -1,5 +1,4 @@
 FROM debian:bookworm-slim
-LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
 
 ARG NB_USER="jovyan"
 ARG NB_UID="1000"

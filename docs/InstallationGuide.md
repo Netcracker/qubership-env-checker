@@ -2,15 +2,18 @@
 
 ## Table of Contents
 
-- [Prerequisites](#prerequisites)
-- [How to Configure View Role for Env-Checker](#how-to-configure-view-role-for-env-checker)
-- [Third Party Software](#third-party-software)
-- [Deployment](#deployment)
-  - [Deployment Parameters](#deployment-parameters)
-  - [HWE](#hwe)
-- [Tests](#tests)
-  - [Sanity Check](#sanity-check)
-  - [Smoke Test Scenario](#smoke-test-scenario)
+* [EnvChecker Installation Guide](#envchecker-installation-guide)
+  * [Table of Contents](#table-of-contents)
+  * [Prerequisites](#prerequisites)
+  * [How to configure view role for env-checker](#how-to-configure-view-role-for-env-checker)
+  * [Third Party Software](#third-party-software)
+  * [Deployment](#deployment)
+    * [Local deployment](#local-deployment)
+    * [Deployment Parameters](#deployment-parameters)
+    * [HWE](#hwe)
+  * [Tests](#tests)
+    * [Sanity check](#sanity-check)
+    * [Smoke test scenario](#smoke-test-scenario)
 
 This document describes installation process for Qubership Environment Checker microservice.
 
@@ -98,21 +101,21 @@ clusters:
 You may need to deploy the following Helm parameters during Environment checker installation. The deployment parameters
 are described in the following table.
 
-| **Parameter**                        | **Required (Mandatory\Optional)** | **Default value**                                | **Value Example**                                       | **Description**                                                                                                                                                |
-| ------------------------------------ | --------------------------------- | ------------------------------------------------ |---------------------------------------------------------| -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CLOUD_PUBLIC_HOST                    | M                                 | -                                                | k8s-apps10.k8s.sdntest.qubership.org                    | The public host is specified to create some Kubernetes elements, such as Ingress in env-checker.                                                               |
-| CHOWN_HOME                           | O (M for Openshift)               | -                                                | - / yes (for Openshift). possible values: 'yes' or 'no' | enables home directory ownership change during container deploy                                                                                                |
-| CHOWN_HOME_OPTS                      | O (M for Openshift)               | -                                                | - / '-R' (for Openshift). possible values: - / '-R'     | sets CHOWN_HOME mode to recursive                                                                                                                              |
-| PRODUCTION_MODE                      | O                                 | FALSE                                            | Possible values: TRUE or FALSE                          | Flag indicating that the server is a production environment. env-checker will be launched in different modes (pod with Service/Ingres or no).                  |
-| ENVIRONMENT_CHECKER_LOG_LEVEL        | O                                 | ERROR                                            | DEBUG                                                   | Log level for all env-checker Notebooks. Any custom value is available. By default, only ERROR or DEBUG are used.                                              |
-| OPS_IDP_URL                          | O (M for IDP integration)         | -                                                | httрs://keycloak.k8s.org                                | URL to keycloak. If IDP parameters are not defined then access to Env Checker is allowable via Jupiter default token                                           |
-| ENVCHECKER_KEYCLOACK_REALM           | O (M for IDP integration)         | -                                                | test-realm                                              | Name of IDP realm. User for Env-checker authentication have to belong to the realm                                                                             |
-| ENVCHECKER_KEYCLOACK_CLIENT_ID       | O (M for IDP integration)         | -                                                | test-env-checker-client                                 | IDP Client ID which have to belong to the realm. Client parameter in IDP 'Valid Redirect URIs' have to contain env-checker ingress URL                         |
-| ENVCHECKER_KEYCLOACK_CLIENT_SECRET   | O (M for IDP integration)         | -                                                | b4iwkh7nQBSxIgBEtlYSxUfNuoGZY19K                        | IDP Client Secret. The value can be viewed in the Credentials tab on the idp client.\_If there is no Credentials tab. Set the Client authentication flag to ON |
-| ENVIRONMENT_CHECKER_JOB_COMMAND      | O                                 | -                                                | ./run.sh notebooks/TestNotebook.ipynb                   | Command to run env-checker shell in Job mode. **Required to create Kubernetes Job**                                                                            |
-| ENVIRONMENT_CHECKER_CRON_JOB_COMMAND | O                                 | -                                                | ./run.sh notebooks/TestNotebook.ipynb                   | Command to run env-checker shell in CronJob mode. **Required to create Kubernetes CronJob**                                                                    |
-| ENVIRONMENT_CHECKER_CRON_SCHEDULE    | O                                 | -                                                | 0 \*/1 \* \* \*                                         | Schedule the release of CronJob in Cron format. Runs for non prod environments. **Required to create Kubernetes CronJob**                                      |
-| ENVIRONMENT_CHECKER_UI_ACCESS_TOKEN  | O                                 | f9a3bd4e9f2c3be01cd629154cfb224c2703181e050254b5 | token12345                                              | Token to log in to Env-Checker UI.                                                                                                                             |
+| **Parameter**                        | **Required (Mandatory\Optional)** | **Default value**  | **Value Example**                                       | **Description**                                                                                                                                                |
+| ------------------------------------ | --------------------------------- | ------------------ |---------------------------------------------------------| -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CLOUD_PUBLIC_HOST                    | M                                 | -                  | `k8s-apps10.k8s.qubership.org`                          | The public host is specified to create some Kubernetes elements, such as Ingress in env-checker.                                                               |
+| CHOWN_HOME                           | O (M for Openshift)               | -                  | - / yes (for Openshift). possible values: 'yes' or 'no' | enables home directory ownership change during container deploy                                                                                                |
+| CHOWN_HOME_OPTS                      | O (M for Openshift)               | -                  | - / '-R' (for Openshift). possible values: - / '-R'     | sets CHOWN_HOME mode to recursive                                                                                                                              |
+| PRODUCTION_MODE                      | O                                 | FALSE              | Possible values: TRUE or FALSE                          | Flag indicating that the server is a production environment. env-checker will be launched in different modes (pod with Service/Ingres or no).                  |
+| ENVIRONMENT_CHECKER_LOG_LEVEL        | O                                 | ERROR              | DEBUG                                                   | Log level for all env-checker Notebooks. Any custom value is available. By default, only ERROR or DEBUG are used.                                              |
+| OPS_IDP_URL                          | O (M for IDP integration)         | -                  | `https://keycloak.k8s.qubership.org`                    | URL to keycloak. If IDP parameters are not defined then access to Env Checker is allowable via Jupiter default token                                           |
+| ENVCHECKER_KEYCLOACK_REALM           | O (M for IDP integration)         | -                  | test-realm                                              | Name of IDP realm. User for Env-checker authentication have to belong to the realm                                                                             |
+| ENVCHECKER_KEYCLOACK_CLIENT_ID       | O (M for IDP integration)         | -                  | test-env-checker-client                                 | IDP Client ID which have to belong to the realm. Client parameter in IDP 'Valid Redirect URIs' have to contain env-checker ingress URL                         |
+| ENVCHECKER_KEYCLOACK_CLIENT_SECRET   | O (M for IDP integration)         | -                  | b4iwkh7nQBSxIgBEtlYSxUfNuoGZY19K                        | IDP Client Secret. The value can be viewed in the Credentials tab on the idp client.\_If there is no Credentials tab. Set the Client authentication flag to ON |
+| ENVIRONMENT_CHECKER_JOB_COMMAND      | O                                 | -                  | ./run.sh notebooks/TestNotebook.ipynb                   | Command to run env-checker shell in Job mode. **Required to create Kubernetes Job**                                                                            |
+| ENVIRONMENT_CHECKER_CRON_JOB_COMMAND | O                                 | -                  | ./run.sh notebooks/TestNotebook.ipynb                   | Command to run env-checker shell in CronJob mode. **Required to create Kubernetes CronJob**                                                                    |
+| ENVIRONMENT_CHECKER_CRON_SCHEDULE    | O                                 | -                  | 0 \*/1 \* \* \*                                         | Schedule the release of CronJob in Cron format. Runs for non prod environments. **Required to create Kubernetes CronJob**                                      |
+| ENVIRONMENT_CHECKER_UI_ACCESS_TOKEN  | O                                 | <Random>           | token12345                                              | Token to log in to Env-Checker UI.                                                                                                                             |
 
 ### HWE
 
@@ -128,8 +131,7 @@ Check for non-prod environments
 1. Log in to Kubernetes
 2. Go to the namespace where env-checker was installed
 3. Go to ingress service link (token to log in to UI may be configured via optional Helm parameter
-   ENVIRONMENT_CHECKER_UI_ACCESS_TOKEN. If this parameter is not set, **"f9a3bd4e9f2c3be01cd629154cfb224c2703181e050254b5"**
-   must be used to log in)
+   `ENVIRONMENT_CHECKER_UI_ACCESS_TOKEN`. If this parameter is not set, check value in secret `env-checker-ui-access-token` with random generated access token.
 4. **ER** - Check if UI env-checker is available
 
 ### Smoke test scenario
