@@ -56,7 +56,7 @@ helm upgrade --install qubership-env-checker \
     --namespace=env-checker --create-namespace \
     charts/env-checker
 
-# Production Mode (Job-only)  
+# Production Mode (Job-only)
 helm upgrade --install qubership-env-checker \
     --namespace=env-checker --create-namespace \
     --set PRODUCTION_MODE=true \
@@ -136,17 +136,17 @@ The env-checker utilizes the Jupyter Server API (v2.0+) without extensions. For 
 flowchart TB
     subgraph "Non-Production Mode"
         A([User]) --> B[OAuth2 Proxy]
-        B --> C[Ingress]  
+        B --> C[Ingress]
         C --> D[Service]
         D --> E[Env-Checker Pod<br/>Jupyter UI]
         E --> F[(Kubernetes API)]
     end
-    
+
     subgraph "Production Mode"
         I[Kubernetes Job] --> J[Env-Checker Pod<br/>Headless]
         J --> K[(Kubernetes API)]
     end
-    
+
     F --> N[(Environment Resources)]
     K --> N
 ```
