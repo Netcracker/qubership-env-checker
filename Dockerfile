@@ -222,16 +222,19 @@ RUN mamba install --yes \
     npm cache clean --force && \
     jupyter lab clean && \
     rm -rf "/home/${NB_USER}/.cache/yarn" && \
-    fix-permissions "${CONDA_DIR}" && \
-    fix-permissions "/home/${NB_USER}"
+    fix-permissions "${CONDA_DIR}"
 
 ENV JUPYTER_PORT=8888
 EXPOSE $JUPYTER_PORT
 
 # Copy local files as late as possible to avoid cache busting
 COPY installation/shells/start-notebook.sh installation/shells/start-singleuser.sh /usr/local/bin/
-# Copy local files as late as possible to avoid cache busting
-COPY installation/shells/start.sh /usr/local/bin/
+# Copy scripts and their dependencies
+COPY --chown="${NB_UID}:${NB_GID}" installation/shells/for_jupyter/ "/home/${NB_USER}/"
+COPY --chown="${NB_UID}:${NB_GID}" installation/python/for_jupyter/ "/home/${NB_USER}/"
+RUN chown -R "${NB_UID}:${NB_GID}" "/home/${NB_USER}/" && \
+    fix-permissions "/home/${NB_USER}"
+
 # Currently need to have both jupyter_notebook_config and jupyter_server_config to support classic and lab
 COPY installation/python/jupyter_server_config.py installation/python/docker_healthcheck.py /etc/jupyter/
 
