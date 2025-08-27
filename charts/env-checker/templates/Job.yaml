@@ -14,7 +14,7 @@ spec:
   template:
     spec:
       serviceAccountName: {{ .Values.serviceAccount.name }}
-      automountServiceAccountToken: false
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountToken }}
       securityContext:
         runAsUser: 10001
       restartPolicy: Never

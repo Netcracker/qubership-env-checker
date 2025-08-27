@@ -8,8 +8,15 @@ on:
     paths-ignore:
       - '.github/**'
       - 'docs/**'
+  workflow_dispatch:
+    inputs:
+      postfix:
+        description: 'Postfix for tag name'
+        required: false
+
 env:
-  TAG_NAME: ${{ github.event.release.tag_name || (github.ref == 'refs/heads/main' && 'main' || ( inputs.postfix != '' && format('{0}-{1}', github.ref, inputs.postfix) || 'none' )) }}
+  RAW_TAG_NAME: ${{ github.event.release.tag_name != '' && github.event.release.tag_name || github.ref_name }}
+  TAG_POSTFIX: ${{ inputs.postfix || '' }}
 
 jobs:
   multiplatform_build:
@@ -19,6 +26,7 @@ jobs:
         component:
           - name: qubership-env-checker
             file: Dockerfile
+            context: .
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -33,6 +41,19 @@ jobs:
           registry: ghcr.io
           username: ${GITHUB_ACTOR}
           password: ${{secrets.GITHUB_TOKEN}}
+      - name: Compute image tag
+        id: tag
+        run: |
+          NAME="${RAW_TAG_NAME}"
+          # sanitize to be a valid docker tag: lowercase, replace invalid chars, max length 128
+          NAME="${NAME,,}"
+          NAME=$(echo "$NAME" | sed -E 's/[^a-z0-9._-]+/-/g')
+          # optional postfix
+          if [ -n "${TAG_POSTFIX}" ]; then
+            POSTFIX=$(echo "${TAG_POSTFIX}" | sed -E 's/[^a-z0-9._-]+/-/g')
+            NAME="${NAME}-${POSTFIX}"
+          fi
+          echo "tag=$NAME" >> $GITHUB_OUTPUT
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
@@ -41,5 +62,5 @@ jobs:
           file: ${{ matrix.component.file }}
           platforms: linux/amd64
           push: ${{ github.repository_owner == 'Netcracker' }}
-          tags: ghcr.io/netcracker/${{ matrix.component.name }}:${{ env.TAG_NAME }}
+          tags: ghcr.io/netcracker/${{ matrix.component.name }}:${{ steps.tag.outputs.tag }}
           provenance: false

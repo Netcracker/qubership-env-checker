@@ -22,9 +22,9 @@ This Memory\CPU usage, which is primarily justified by the support of the third-
 | env-checker-job     | Job      | 100             | 1                  | 1000          | 2                 | 1        |
 | env-checker-cronjob | Cron-job | 100             | 1                  | 1000          | 2                 | 1        |
 
-Total number of CPU and Memory, in case of using all services simultaneously:  
-Total RAM request for prod profile: **3072Mi**  
+Total number of CPU and Memory, in case of using all services simultaneously:
+Total RAM request for prod profile: **3072Mi**
 Total RAM limit for prod profile: **6144Mi**
 
-Total CPU request for prod profile: **300m**  
+Total CPU request for prod profile: **300m**
 Total CPU limit for prod profile: **3000m** (in fact, JOB will be completed soon, hence 2000m is max consumption in runtime)
