@@ -25,7 +25,7 @@ jobs:
           echo "Version: ${{ github.event.inputs.version }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Check if tag exists
         id: check_tag
@@ -54,7 +54,7 @@ jobs:
       platforms: ${{ steps.load_component.outputs.platforms }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Load Docker Configuration
         id: load_component
@@ -123,7 +123,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Archive and Upload Assets
         uses: netcracker/qubership-workflow-hub/actions/archive-and-upload-assets@main
