@@ -11,6 +11,19 @@
     secretKeyRef:
       name: env-checker-ui-access-token
       key: access-token
+- name: "PRODUCTION_MODE"
+  value: '{{ .Values.PRODUCTION_MODE }}'
+- name: "ENVIRONMENT_CHECKER_STORAGE_BUCKET_EXPIRATION_DAYS"
+  value: '{{ .Values.ENVIRONMENT_CHECKER_STORAGE_BUCKET_EXPIRATION_DAYS }}'
+- name: "ENVIRONMENT_CHECKER_LOG_LEVEL"
+  value: '{{ .Values.ENVIRONMENT_CHECKER_LOG_LEVEL }}'
+- name: "ENVCHECKER_STORAGE_BUCKET"
+  value: '{{ .Values.ENVCHECKER_STORAGE_BUCKET }}'
+- name: "CLOUD_PUBLIC_HOST"
+  valueFrom:
+    secretKeyRef:
+      name: cloud-passport-envs
+      key: CLOUD_PUBLIC_HOST
 {{- end }}
 {{- define "envchecker.pod.volumeMounts" }}
 - name: application-config
