@@ -259,7 +259,7 @@ WORKDIR "${HOME}"
 #    jupyter labextension disable --level=system "@jupyterlab/apputils-extension:announcements"
 
 # Download and install kubectl
-RUN KUBECTL_VERSION="$(curl -Ls https://dl.k8s.io/release/stable.txt)"; \
+RUN KUBECTL_VERSION="$(curl -Ls https://dl.k8s.io/release/latest.txt)"; \
     wget --progress=dot:giga -O /usr/local/bin/kubectl-${KUBECTL_VERSION} https://dl.k8s.io/${KUBECTL_VERSION}/bin/linux/amd64/kubectl && \
     chmod +x /usr/local/bin/kubectl-${KUBECTL_VERSION} && \
     ln -sf /usr/local/bin/kubectl-${KUBECTL_VERSION} /usr/local/bin/kubectl
