@@ -73,9 +73,3 @@ jobs:
           # To report GitHub Actions status checks
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BRANCH: ${{ github.event.pull_request.base.ref }}
-          # Explicitly disable Java linters to override external config
-          VALIDATE_JAVA: false
-          VALIDATE_CHECKSTYLE: false
-          VALIDATE_JAVA_SPOTBUGS: false
-          VALIDATE_JAVA_PMD: false
-          JAVA_LINTER_RULES: false
