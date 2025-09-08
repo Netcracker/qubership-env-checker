@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 ARG NB_USER="jovyan"
 ARG NB_UID="1000"
