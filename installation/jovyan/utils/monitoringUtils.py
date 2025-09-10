@@ -121,15 +121,6 @@ class MonitoringHelper:
         cls.exporter.force_flush(1000)
 
     @classmethod
-    def pushNotebookExecutionResultsToMonitoring(cls, notebook_base_name: str):
-        """
-        WARNING: must be used only by runNotebook.sh
-        """        
-
-        notebook_execution_data_list = nb_data_manipulation_utils.extract_notebook_execution_data(notebook_base_name)
-        cls.pushToMonitoring(notebook_execution_data_list)
-
-    @classmethod
     def pushNotebookExecutionResultsToMonitoringByExecutedNotebookPath(cls, executed_notebook_path: str):
         """
         WARNING: must be used only by run.sh
