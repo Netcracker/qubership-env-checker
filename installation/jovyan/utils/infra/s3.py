@@ -22,11 +22,8 @@ from errorCode import ErrorCode
 log_level = env_checker_utils.get_env_variable_value_by_name('ENVIRONMENT_CHECKER_LOG_LEVEL')
 urllib3.disable_warnings()
 
-BULK_TABLE_PATH_TEMPLATE = '{cloud_name}/{initiator}/{date}/{bulk_check_name}_{timestamp}Table.html'
 REPORT_FULL_URL_TEMPLATE = '{s3_server_url}/{bucket_name}/{bucket_to_report_path}'
 REPORT_PATH_TEMPLATE = '{cloud_name}/{initiator}/{date}/{scope}{env}{report_name}_{timestamp}.zip'
-# Deprecated, runNotebook.sh doesn't support scope, env and other path segments for generated reports deliberately. 
-REPORT_PATH_TEMPLATE_OLD = 'reports/{initiator}/{report_name}_{timestamp}.zip'
 
 BUCKET_NAME = env_checker_utils.get_env_variable_value_by_name('ENVCHECKER_STORAGE_BUCKET')
 CLOUD_NAME = env_checker_utils.get_cloud_name()
@@ -120,77 +117,6 @@ def init_env_checker_bucket():
         else:
             print(f'Unexpected error when trying to check S3 bucket existance: {error_code}')
             sys.exit(1)
-    
-def uploadReports(report_base_name: str) -> str:
-    """Gets all generated reports with name, containing given report_base_name, zips them and uploads zip to S3 storage bucket
-
-    Parameters
-    ----------
-    report_base_name : str
-        base name of generated reports for particular notebook
-
-    Returns
-    -------
-    str
-        URL to download uploaded zip from bucket (auth is required)
-    """
-
-    init_env_checker_bucket()
-
-    zip = env_checker_utils.zip_reports_by_base_name(report_base_name)
-    if zip is None:
-        return
-    zip.seek(0)
-    nb_exec_data = nb_data_manipulation_utils.extract_notebook_execution_data_for_s3_pushing(report_base_name)
-    if nb_exec_data is None:
-        return
-    s3_upload_location = REPORT_PATH_TEMPLATE_OLD.format(report_name = report_base_name.lower(), initiator = nb_exec_data[constants.INITIATOR_LABEL], 
-                                                         timestamp = nb_exec_data[constants.LAST_RUN])
-    try:
-        s3_client.upload_fileobj(zip, BUCKET_NAME, s3_upload_location)
-        url = REPORT_FULL_URL_TEMPLATE.format(s3_server_url = S3_URL, bucket_name = BUCKET_NAME, bucket_to_report_path = s3_upload_location)
-        print(f'{report_base_name} reports are saved in S3: {url}')
-    except ClientError as e:
-        logging.error(e)
-        return
-    nb_data_manipulation_utils.update_s3_link_label_for_notebook(report_base_name)
-    return url
-
-def uploadBulkCheckTable(bulk_check_name: str) -> str:
-    """Gets generated report table as bulk check execution result, uploads it to S3 storage bucket
-
-    Parameters
-    ----------
-    bulk_check_name : str
-        name of bulk check file
-
-    Returns
-    -------
-    str
-        URL to download uploaded table from bucket (auth is required)
-    """
-
-    init_env_checker_bucket()
-    bulk_table_path = f'out/{bulk_check_name}Table.html'
-    try:
-        f = open(bulk_table_path)
-        f.close()
-    except FileNotFoundError:
-        print('Cannot find bulk report table.')
-        return
-    initiator = constants.DEFAULT_INITIATOR
-    timestamp = str(int(time.time()))
-    s3_upload_location = BULK_TABLE_PATH_TEMPLATE.format(cloud_name = CLOUD_NAME, date = convert_timestamp_to_date_str(timestamp),
-                                                          bulk_check_name = f'{bulk_check_name}Table', initiator = initiator, timestamp = timestamp)
-    try:
-        s3_client.upload_file(bulk_table_path, BUCKET_NAME, s3_upload_location)
-        url = REPORT_FULL_URL_TEMPLATE.format(s3_server_url = S3_URL, bucket_name = BUCKET_NAME, 
-                                                  bucket_to_report_path = s3_upload_location)
-        bulk_check_table = f'{bulk_check_name}Table.html'
-        print(f'{bulk_check_table} report is saved in S3: {url}')
-        return url
-    except ClientError as e:
-        logging.error(e)  
 
 def uploadReportsByExecutedNotebookPath(executed_notebook_path: str) -> str:
     """Gets all generated reports with name, which are related to executed notebook with path=executed_notebook_path, zips them and uploads zip to S3 storage bucket
