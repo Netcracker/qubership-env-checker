@@ -10,7 +10,14 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 USER root
 
-# Install all OS dependencies for notebook server that starts but lacks all features (e.g., download as all possible file formats)
+# Install all OS dependencies for notebook server (basic minimum) that starts but lacks all features
+# (e.g., download as all possible file formats). Include next dependencies:
+#   bzip2 - archiver/decompressor for .bz2 format. Needed to unpack micromamba .tar.bz2 during image build
+#   locales - localization packages to generate UTF-8 locale
+#   tini - minimal init process that handles signals and zombie processes correctly. Used as container ENTRYPOINT
+#   wget - HTTP/HTTPS file downloader. Required to fetch micromamba, run-one, kubectl, yq. Can be replaced with curl
+#   ca-certificates - root certificates for TLS, needed by all HTTP/HTTPS requests
+#   locale-gen - configure and generate locale
 RUN apt-get update --yes && \
     apt-get install --yes --no-install-recommends \
     bzip2 \
@@ -153,49 +160,35 @@ RUN set -x && \
 # Configure container startup
 ENTRYPOINT ["tini", "-g", "--"]
 WORKDIR "${HOME}"
-#todo duplicate is it need?
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# Download run-one file and upload to /tmp
-# Unpack the file to /opt
-# delete temp files
 # install opentelemetry exporter
-RUN wget --progress=dot:giga -O /tmp/run-one_1.17.orig.tar.gz http://security.ubuntu.com/ubuntu/pool/main/r/run-one/run-one_1.17.orig.tar.gz && \
-    tar --directory=/opt -xvf /tmp/run-one_1.17.orig.tar.gz && \
-    rm /tmp/run-one_1.17.orig.tar.gz
-
 RUN pip install --no-cache-dir \
     opentelemetry-exporter-prometheus-remote-write \
     redis
 
-# Install all OS dependencies for fully functional notebook server
+# Install all OS dependencies for fully functional notebook server:
+#   fonts-liberation - used by nbconvert (PDF/HTML export)
+#   pandoc - document converter for notebooks, used for HTML/Markdown/partial PDF
+#   curl - used to obtain kubectl version and in Jupyter UI terminal
+#   iputils-ping - network diagnostics for network/Service/Pod (ping)
+#   traceroute - show route (nodes/gateways/overlay) from the Pod to the target and where packets are lost
+#   git - VCS client, needed for GIT integration (pull notebooks)
+#   tzdata - time zones
+#   unzip - unpack .zip
+#   texlive-xetex, texlive-fonts-recommended, texlive-plain-generic - required to build PDFs from nbconvert
 RUN apt-get -o Acquire::Check-Valid-Until=false update --yes && \
     apt-get install --yes --no-install-recommends \
         fonts-liberation \
-        # - pandoc is used to convert notebooks to html files
-        #   it's not present in arch64 ubuntu image, so we install it here
         pandoc \
-        # Common useful utilities
         curl \
         iputils-ping \
         traceroute \
         git \
-        nano-tiny \
         tzdata \
         unzip \
-        vim-tiny \
-        # git-over-ssh
-        openssh-client \
-        # less is needed to run help in R
-        # see: https://github.com/jupyter/docker-stacks/issues/1588
-        less \
-        # nbconvert dependencies
-        # https://nbconvert.readthedocs.io/en/latest/install.html#installing-tex
         texlive-xetex \
         texlive-fonts-recommended \
-        texlive-plain-generic \
-        # Enable clipboard on Linux host systems
-        xclip && \
+        texlive-plain-generic && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Jupyter Notebook, Lab, and Hub
@@ -224,8 +217,6 @@ RUN mamba install --yes \
 ENV JUPYTER_PORT=8888
 EXPOSE $JUPYTER_PORT
 
-# Copy local files as late as possible to avoid cache busting
-COPY installation/shells/start-notebook.sh installation/shells/start-singleuser.sh /usr/local/bin/
 # Copy local files as late as possible to avoid cache busting
 COPY installation/shells/start.sh /usr/local/bin/
 # Currently need to have both jupyter_notebook_config and jupyter_server_config to support classic and lab
