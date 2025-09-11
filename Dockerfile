@@ -218,7 +218,7 @@ ENV JUPYTER_PORT=8888
 EXPOSE $JUPYTER_PORT
 
 # Copy local files as late as possible to avoid cache busting
-COPY installation/shells/start.sh /usr/local/bin/
+COPY installation/shells/start.sh installation/shells/start-notebook.sh /usr/local/bin/
 # Currently need to have both jupyter_notebook_config and jupyter_server_config to support classic and lab
 COPY installation/python/jupyter_server_config.py installation/python/docker_healthcheck.py /etc/jupyter/
 
