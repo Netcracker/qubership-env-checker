@@ -1,8 +1,6 @@
 #!/bin/bash
 
 file_path=""
-input_params=""
-
 outs=()
 
 #declare -A params
@@ -72,7 +70,10 @@ prepareOutput() {
     if [ -d "/home/jovyan/out" ]; then
         find /home/jovyan/out -type d -empty -delete          # delete all empty catalogs in './out' folder
         find /home/jovyan/out -maxdepth 1 -type f -delete     # delete all files in './out' folder (except for non-empty subfolders)
-        source /home/jovyan/shells/remove_out_catalogs.sh     # deleting directories and subdirectories in the out folder for the last hour
+        if [ -f /home/jovyan/shells/remove_out_catalogs.sh ]; then
+            # deleting directories and subdirectories in the out folder for the last hour
+            source /home/jovyan/shells/remove_out_catalogs.sh
+        fi
         if [[ -n $output_subfolder ]]; then
             rm -rf "/home/jovyan/out/$output_subfolder"       # delete subfolder
         fi
@@ -87,15 +88,15 @@ prepareOutput() {
 # $1 - name and full path to composite .yaml file
 runComposite() {
     # get composite file content without any comments
-    composite_file_content=$(yq -oy '... comments=""' $1)
+    composite_file_content=$(yq -oy '... comments=""' "$1")
     checks_amount=$(echo "$composite_file_content" | yq -oy e '.checks | length')
 
-    for ((i=0;i<$checks_amount;i++))
+    for ((i=0;i<checks_amount;i++))
     do
         notebook_path=$(calculate_composite_notebook_path)
         params="$(echo "$composite_file_content" | yq -oy e ".checks.[$i] | select(.params != null) | .params")"
         out="$(echo "$composite_file_content" | yq -oy e ".checks.[$i] | select(.out != null) | .out")"
-        runSingleNotebook $notebook_path "$params" "$out"
+        runSingleNotebook "$notebook_path" "$params" "$out"
     done
 }
 
@@ -109,7 +110,7 @@ calculate_composite_notebook_path() {
 # $3 - initiator
 # $4 - namespace
 extract_notebook_execution_metrics() {
-    report_name=$(echo $(basename -- "$1") | sed -nr 's/([a-zA-Z0-9_]+)_[0-9]+\.ipynb/\1/p' | awk '{print tolower($0)}')
+    report_name=$(basename -- "$1" | sed -nr 's/([a-zA-Z0-9_]+)_[0-9]+\.ipynb/\1/p' | awk '{print tolower($0)}')
     # try to extract 'metrics' scrap from executed notebook
     metrics=$(python -c "import nb_data_manipulation_utils; nb_data_manipulation_utils.extract_metrics_from_nb_scraps('$1')")
     if [ "$metrics" != '{}' ] ; then
@@ -119,42 +120,42 @@ extract_notebook_execution_metrics() {
             #if scrap structure is valid, check optional fields (report_app, initiator, start_time, duration) and, if they don't present, set them
             if [[ "$3" != "null" ]] ; then
                 # if 'initiator' was provided as shell parameter, use it to set 'initiator' field of all metrics
-                metrics=$(echo $metrics | initiator=$3 yq -oj '(.[].initiator)=env(initiator)')
+                metrics=$(echo "$metrics" | initiator=$3 yq -oj '(.[].initiator)=env(initiator)')
             else
                 # else check if 'initiator' label is present in all metrics from notebook. If not, set default 'envchecker' value
-                initiator_specified=$(echo $metrics | yq -oj '. | all_c(has("initiator"))')
+                initiator_specified=$(echo "$metrics" | yq -oj '. | all_c(has("initiator"))')
                 if [[ "$initiator_specified" == "false" ]] ; then
-                    metrics=$(echo $metrics | yq -oj '(.[].initiator)="envchecker"')
+                    metrics=$(echo "$metrics" | yq -oj '(.[].initiator)="envchecker"')
                 fi
             fi
 
             # if labels "report_app", "env", "scopre" are not specified, set default value (null) for them
-            metrics=$(echo $metrics | yq -oj '(.[] | (select (. | has("report_app") | not)) .report_app) |= "null"' \
+            metrics=$(echo "$metrics" | yq -oj '(.[] | (select (. | has("report_app") | not)) .report_app) |= "null"' \
                                     | yq -oj '(.[] | (select (. | has("env") | not)) .env) |= "null"'               \
                                     | yq -oj '(.[] | (select (. | has("scope") | not)) .scope) |= "null"')
 
-            start_time_specified=$(echo $metrics | yq -oj '. | all_c(has("last_run"))')
+            start_time_specified=$(echo "$metrics" | yq -oj '. | all_c(has("last_run"))')
             if [[ "$start_time_specified" == "false" ]] ; then
-                start_millis=$(date -d $(yq '.metadata.papermill.start_time' $1) +'%s%3N')
-                metrics=$(echo $metrics | start_time=$start_millis yq -oj '(.[].last_run)=env(start_time)')
+                start_millis=$(date -d $(yq '.metadata.papermill.start_time' "$1") +'%s%3N')
+                metrics=$(echo "$metrics" | start_time=$start_millis yq -oj '(.[].last_run)=env(start_time)')
             fi
 
 
-            nb_exec_duration=$(yq -oj '.metadata.papermill.duration' $1 | awk '{print int( $1 * 1000 )}')
-            metrics=$(echo $metrics | duration=$nb_exec_duration yq -oj '(.[] | (select (. | has("last_duration") | not)) .last_duration) |= env(duration)')
+            nb_exec_duration=$(yq -oj '.metadata.papermill.duration' "$1" | awk '{print int( $1 * 1000 )}')
+            metrics=$(echo "$metrics" | duration=$nb_exec_duration yq -oj '(.[] | (select (. | has("last_duration") | not)) .last_duration) |= env(duration)')
 
             # make all labels string values be in lowercase
-            metrics=$(echo $metrics | yq -oj '(... | (select(tag=="!!str"))) |= downcase')
+            metrics=$(echo "$metrics" | yq -oj '(... | (select(tag=="!!str"))) |= downcase')
             # add label 's3_link' with default 'null' value and 'report_name' label to each metric in list
-            echo $metrics | yq -oj ".[] += {\"s3_link\": \"null\", \"report_name\": \"$report_name\"}"
+            echo "$metrics" | yq -oj ".[] += {\"s3_link\": \"null\", \"report_name\": \"$report_name\"}"
             return 0
         fi
     fi
 
     # if such scrap is not present in executed notebook, then determine metrics by papermill metadata
-    notebook_meta=$(yq -oj '.metadata.papermill' $1)
-    start_millis=$(date -d $(echo $notebook_meta | yq '.start_time') +'%s%3N')
-    duration=$(echo $notebook_meta | yq '.duration' | awk '{print int( $1 * 1000 )}';)
+    notebook_meta=$(yq -oj '.metadata.papermill' "$1")
+    start_millis=$(date -d $(echo "$notebook_meta" | yq '.start_time') +'%s%3N')
+    duration=$(echo "$notebook_meta" | yq '.duration' | awk '{print int( $1 * 1000 )}';)
     initiator="envchecker"
     if [[ (-n $3) && ("$3" != "envchecker") ]] ; then
         initiator="$3"
@@ -163,12 +164,13 @@ extract_notebook_execution_metrics() {
     if [[ (-n $4) && ("$4" != "null") ]] ; then
         report_namespace="$4"
     fi
-    echo $(echo $(nb_start=$start_millis duration_millis=$duration status=$2 initiator=$initiator report_name=$report_name report_namespace=$report_namespace yq --null-input -oj '.last_run=env(nb_start) | .last_duration=env(duration_millis) | .status=env(status) | .report_namespace=strenv(report_namespace) | .report_app="null" | .initiator=strenv(initiator) | .s3_link="null" | .env="null" | .scope="null" | .report_name=strenv(report_name) | [.]'))
+    nb_start=$start_millis duration_millis=$duration status=$2 initiator=$initiator report_name=$report_name report_namespace=$report_namespace \
+    yq --null-input -oj '.last_run=env(nb_start) | .last_duration=env(duration_millis) | .status=env(status) | .report_namespace=strenv(report_namespace) | .report_app="null" | .initiator=strenv(initiator) | .s3_link="null" | .env="null" | .scope="null" | .report_name=strenv(report_name) | [.]'
 }
 
 # $1 - executed notebook path
 reportToS3() {
-    if [[ $(echo "${reports[@]}" | fgrep -w "s3") ]]; then
+    if printf '%s\n' "${reports[@]}" | grep -Fqw 's3'; then
         python -c "import infra.s3 as s3; s3.uploadReportsByExecutedNotebookPath('$1')"
     fi
 }
@@ -180,7 +182,7 @@ runSingleNotebook() {
 
     script_path=$1
     if [[ ! -f $script_path ]]; then
-      printf "ERROR: file $script_path does not exist or invalid\n"
+      printf "ERROR: file %s does not exist or invalid\n" "$script_path"
       overall_result=1
       return 1
     fi
@@ -192,7 +194,11 @@ runSingleNotebook() {
     fi
     echo "Executed with params: $params"
 
-    validation=$(. /home/jovyan/shells/namespace_validator.sh "$params")
+    if [ -f /home/jovyan/shells/namespace_validator.sh ]; then
+        validation=$(. /home/jovyan/shells/namespace_validator.sh "$params")
+    else
+        validation=""
+    fi
     if [ "$validation" != "" ]; then
         echo "$validation"
         overall_result=1
@@ -200,21 +206,21 @@ runSingleNotebook() {
     fi
 
     script_name=$(basename -- "$1")
-    out_script_name_without_ext=$(get_out_script_name_without_ext $script_name $3)
+    out_script_name_without_ext=$(get_out_script_name_without_ext "$script_name" "$3")
     echo "script name: $script_name"
     echo "out script name without extension: $out_script_name_without_ext"
     out_script_path="$out_path/${out_script_name_without_ext}.ipynb"
 
     if [[ -z $params ]]; then
-        printf "run notebook $script_path\n"
-        papermill $script_path -y "result_file_path: $out_script_name_without_ext" -y "out_path: $out_path" $out_script_path
+        printf "run notebook %s\n" "$script_path"
+        papermill "$script_path" -y "result_file_path: $out_script_name_without_ext" -y "out_path: $out_path" "$out_script_path"
     else
-        printf "run notebook $script_path with params: \n"
-        papermill $script_path -y "$params" -y "result_file_path: $out_script_name_without_ext" -y "out_path: $out_path" $out_script_path
+        printf "run notebook %s with params: \n" "$script_path"
+        papermill "$script_path" -y "$params" -y "result_file_path: $out_script_name_without_ext" -y "out_path: $out_path" "$out_script_path"
     fi
 
     res=$(/home/jovyan/utils/parseOut.py < "$out_script_path")
-    outs=($out_script_path)
+    outs=("$out_script_path")
 
     if [[ -z $res ]]; then
         res=False
@@ -230,28 +236,28 @@ runSingleNotebook() {
         namespace=$(echo "$2" | yq -oy '.namespace // "null" | downcase')
     fi
     metrics=$(extract_notebook_execution_metrics "$out_script_path" $overall_result "$initiator" "$namespace")
-    outs=($out_script_path)
+    outs=("$out_script_path")
 
-    reportToPdf $out_script_name_without_ext
-    outs="${outs[*]}"
+    reportToPdf "$out_script_name_without_ext"
+    outs=("${outs[@]}")
     params_as_json_str=$(echo "$params" | yq -oj -I0)
     outs_as_json_str=$(echo "[${outs//${IFS:0:1}/,}]" | yq -oj -I0)
     output=$(python -c "import env_checker_utils as utils; print(utils.get_related_reports('$out_script_path','$outs_as_json_str','$out_path'))")
     outs_as_json_str=$output
-    yq ".checks += {\"path\":\"$script_path\", \"outs\": $outs_as_json_str, \"result\":\"$res\", \"params\":$params_as_json_str, \"metrics\":$metrics}" $composite_result_file_path -i
-    reportToS3 $out_script_path
-    reportToMonitoring $out_script_path
+    yq ".checks += {\"path\":\"$script_path\", \"outs\": $outs_as_json_str, \"result\":\"$res\", \"params\":$params_as_json_str, \"metrics\":$metrics}" "$composite_result_file_path" -i
+    reportToS3 "$out_script_path"
+    reportToMonitoring "$out_script_path"
 
-    echo $res
+    echo "$res"
 }
 
 reportToPdf() {
    if $pdf_reporting_enabled ;
       then
-      if [[ $(echo "${reports[@]}" | fgrep -w "pdf") ]]; then
+      if printf '%s\n' "${reports[@]}" | grep -Fqw 'pdf'; then
           echo "report to $1.pdf"
-          jupyter nbconvert --to pdf $out_path/$1
-          outs+=("$out_path/"$1".pdf")
+          jupyter nbconvert --to pdf "$out_path/$1"
+          outs+=("$out_path/$1.pdf")
       else
           echo "report to pdf is disabled"
       fi
@@ -259,18 +265,18 @@ reportToPdf() {
 }
 
 reportToHtml() {
-   if [[ $(echo "${reports[@]}" | fgrep -w "html") ]]; then
+   if printf '%s\n' "${reports[@]}" | grep -Fqw 'html'; then
        html_reporting_enabled=true
    fi
    if $html_reporting_enabled ;
    then
        html_result=$(/home/jovyan/utils/report_generator.py "$out_path")
-       echo $html_result
+       echo "$html_result"
    fi
 }
 
 reportToJson() {
-   if [[ $(echo "${reports[@]}" | fgrep -w "json") ]]; then
+   if printf '%s\n' "${reports[@]}" | grep -Fqw 'json'; then
        json_reporting_enabled=true
    fi
    if $json_reporting_enabled ;
@@ -305,7 +311,10 @@ if [[ $# == 0 ]]; then
     exit 1
 fi
 
-source /home/jovyan/shells/set_paths.sh # override PATH and PYTHONPATH variables
+if [ -f /home/jovyan/shells/set_paths.sh ]; then
+    # override PATH and PYTHONPATH variables
+    source /home/jovyan/shells/set_paths.sh
+fi
 
 while getopts ":p:y:j:r:e:o:-:" opt; do
     case ${opt} in
@@ -335,7 +344,7 @@ while getopts ":p:y:j:r:e:o:-:" opt; do
         execute_pass=${execute_pass//,/ } #replacement for env-checker-job for case when value for -e flag will be separated by ','
         echo "execute_pass: $execute_pass"
         executed_command="python $execute_pass"
-        prepared_yaml=$(eval $executed_command)
+        prepared_yaml=$(eval "$executed_command")
         echo "prepared yaml from -e flag: $prepared_yaml"
         ;;
     y)
@@ -353,14 +362,14 @@ while getopts ":p:y:j:r:e:o:-:" opt; do
     r)
         DEFAULT_IFS=$IFS
         IFS=','
-        read -ra reports <<< ${OPTARG}
+        read -ra reports <<< "${OPTARG}"
         IFS=$DEFAULT_IFS
         if [ ${#reports[@]} -gt 0 ]; then
             echo "${reports[@]}"
         fi
         ;;
     ?)
-        echo -e "Unrecognized option, arg: $arg, OPTARG: $OPTARG"
+        echo -e "Unrecognized option, OPTARG: $OPTARG"
         exit 0
         ;;
     :)
@@ -370,7 +379,7 @@ while getopts ":p:y:j:r:e:o:-:" opt; do
     esac
 done
 
-file_path=${@:$OPTIND:1}  #get value after all options (COMPOSITE_FILE_PATH|NOTEBOOK_FILE_PATH)
+file_path=${*:$OPTIND:1}  #get value after all options (COMPOSITE_FILE_PATH|NOTEBOOK_FILE_PATH)
 
 #Concatenate subfolders to './out' if they were passed using the '-o' flag
 if [ -n "$output_subfolder" ]; then
@@ -393,17 +402,17 @@ elif [[ -n $prepared_yaml ]]; then
     runComposite "$out_path/input.yaml"
 elif [[ $file_path == *.ipynb ]]; then
     prepareOutput
-    runSingleNotebook $file_path "$params"
+    runSingleNotebook "$file_path" "$params"
 elif [[ $file_path == *.yaml || $file_path == *.yml ]]; then
     prepareOutput
     runComposite "$file_path"
 else
-    printf "ERROR: file $file_path is not exist or invalid"
+    printf "ERROR: file %s is not exist or invalid" "$file_path"
 fi
 
 echo "overall_result: $overall_result"
 txt_result_file_path="$out_path/result.txt"
-$(echo $overall_result >> $txt_result_file_path)
+echo "$overall_result" >> "$txt_result_file_path"
 
 reportToHtml
 reportToJson
