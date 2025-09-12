@@ -71,6 +71,7 @@ prepareOutput() {
         find /home/jovyan/out -type d -empty -delete          # delete all empty catalogs in './out' folder
         find /home/jovyan/out -maxdepth 1 -type f -delete     # delete all files in './out' folder (except for non-empty subfolders)
         if [ -f /home/jovyan/shells/remove_out_catalogs.sh ]; then
+            # shellcheck disable=SC1091
             # shellcheck source=/home/jovyan/shells/remove_out_catalogs.sh
             # deleting directories and subdirectories in the out folder for the last hour
             source /home/jovyan/shells/remove_out_catalogs.sh
@@ -196,6 +197,7 @@ runSingleNotebook() {
     echo "Executed with params: $params"
 
     if [ -f /home/jovyan/shells/namespace_validator.sh ]; then
+        # shellcheck disable=SC1091
         # shellcheck source=/home/jovyan/shells/namespace_validator.sh
         validation=$(. /home/jovyan/shells/namespace_validator.sh "$params")
     else
@@ -272,8 +274,7 @@ reportToHtml() {
    fi
    if $html_reporting_enabled ;
    then
-       html_result=$(/home/jovyan/utils/report_generator.py "$out_path")
-       echo "$html_result"
+       /home/jovyan/utils/report_generator.py "$out_path"
    fi
 }
 
@@ -283,7 +284,7 @@ reportToJson() {
    fi
    if $json_reporting_enabled ;
    then
-       json_result=$(/home/jovyan/utils/json_report_generator.py "$out_path")
+       /home/jovyan/utils/json_report_generator.py "$out_path"
    fi
 }
 
@@ -314,6 +315,7 @@ if [[ $# == 0 ]]; then
 fi
 
 if [ -f /home/jovyan/shells/set_paths.sh ]; then
+    # shellcheck disable=SC1091
     # shellcheck source=/home/jovyan/shells/set_paths.sh
     # override PATH and PYTHONPATH variables
     source /home/jovyan/shells/set_paths.sh
