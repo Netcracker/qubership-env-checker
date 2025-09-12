@@ -34,6 +34,8 @@ ENV CONDA_DIR=/opt/conda \
 ENV PATH="${CONDA_DIR}/bin:${PATH}" \
     HOME="/home/${NB_USER}"
 
+# Copy local files as late as possible to avoid cache busting
+COPY installation/shells/start.sh /usr/local/bin/
 # Copy a script that we will use to correct permissions after running certain commands
 COPY installation/shells/fix-permissions.sh /usr/local/bin/fix-permissions
 RUN chmod a+rx /usr/local/bin/fix-permissions
