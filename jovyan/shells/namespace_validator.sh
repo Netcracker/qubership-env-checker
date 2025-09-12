@@ -4,7 +4,7 @@ check_namespace() {
     local namespace="$1"
     kubectl get namespace "$namespace" > /dev/null 2>&1
     if [ $? -ne 0 ]; then
-        printf "\033[0;31mERROR: namespace=$namespace does not exist.\033[0m\n"
+        printf "\033[0;31mERROR: namespace=%s does not exist.\033[0m\n" "$namespace"
         return 1
     fi
     return 0
