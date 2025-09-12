@@ -136,7 +136,7 @@ extract_notebook_execution_metrics() {
 
             start_time_specified=$(echo "$metrics" | yq -oj '. | all_c(has("last_run"))')
             if [[ "$start_time_specified" == "false" ]] ; then
-                start_millis=$(date -d $(yq '.metadata.papermill.start_time' "$1") +'%s%3N')
+                start_millis=$(date -d "$(yq '.metadata.papermill.start_time' "$1")" +'%s%3N')
                 metrics=$(echo "$metrics" | start_time=$start_millis yq -oj '(.[].last_run)=env(start_time)')
             fi
 
@@ -154,7 +154,7 @@ extract_notebook_execution_metrics() {
 
     # if such scrap is not present in executed notebook, then determine metrics by papermill metadata
     notebook_meta=$(yq -oj '.metadata.papermill' "$1")
-    start_millis=$(date -d $(echo "$notebook_meta" | yq '.start_time') +'%s%3N')
+    start_millis=$(date -d "$(echo "$notebook_meta" | yq '.start_time')" +'%s%3N')
     duration=$(echo "$notebook_meta" | yq '.duration' | awk '{print int( $1 * 1000 )}';)
     initiator="envchecker"
     if [[ (-n $3) && ("$3" != "envchecker") ]] ; then
@@ -286,7 +286,7 @@ reportToJson() {
 }
 
 reportToMonitoring() {
-    if [[ $(echo "${reports[@]}" | fgrep -w "monitoring") ]]; then
+    if printf '%s\n' "${reports[@]}" | grep -Fqw 'monitoring'; then
         python -c "from monitoringUtils import MonitoringHelper; MonitoringHelper.pushNotebookExecutionResultsToMonitoringByExecutedNotebookPath('$1')"
     fi
 }
