@@ -71,6 +71,7 @@ prepareOutput() {
         find /home/jovyan/out -type d -empty -delete          # delete all empty catalogs in './out' folder
         find /home/jovyan/out -maxdepth 1 -type f -delete     # delete all files in './out' folder (except for non-empty subfolders)
         if [ -f /home/jovyan/shells/remove_out_catalogs.sh ]; then
+            # shellcheck source=/home/jovyan/shells/remove_out_catalogs.sh
             # deleting directories and subdirectories in the out folder for the last hour
             source /home/jovyan/shells/remove_out_catalogs.sh
         fi
@@ -195,6 +196,7 @@ runSingleNotebook() {
     echo "Executed with params: $params"
 
     if [ -f /home/jovyan/shells/namespace_validator.sh ]; then
+        # shellcheck source=/home/jovyan/shells/namespace_validator.sh
         validation=$(. /home/jovyan/shells/namespace_validator.sh "$params")
     else
         validation=""
@@ -312,6 +314,7 @@ if [[ $# == 0 ]]; then
 fi
 
 if [ -f /home/jovyan/shells/set_paths.sh ]; then
+    # shellcheck source=/home/jovyan/shells/set_paths.sh
     # override PATH and PYTHONPATH variables
     source /home/jovyan/shells/set_paths.sh
 fi
@@ -368,12 +371,12 @@ while getopts ":p:y:j:r:e:o:-:" opt; do
             echo "${reports[@]}"
         fi
         ;;
-    ?)
-        echo -e "Unrecognized option, OPTARG: $OPTARG"
-        exit 0
-        ;;
     :)
         echo "Option -$OPTARG requires an argument." >&2
+        exit 0
+        ;;
+    ?)
+        echo -e "Unrecognized option, OPTARG: $OPTARG"
         exit 0
         ;;
     esac

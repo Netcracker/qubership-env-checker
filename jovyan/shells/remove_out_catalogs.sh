@@ -1,7 +1,6 @@
 #!/bin/bash
 
 out_dir="/home/jovyan/out"
-current_time=$(date +%s)
 threshold_time=$(date -d '1 hour ago' +%s)
 
 #  Looping through folders inside the `out` folder
