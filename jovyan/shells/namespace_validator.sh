@@ -10,9 +10,9 @@ check_namespace() {
     return 0
 }
 
-local params="$1"
-local namespace_value=""
-local overall_result=0
+params="$1"
+namespace_value=""
+overall_result=0
 
 if [[ $params == "namespace:"* ]]; then
     namespace_value=$(echo "$params" | grep -oP '(?<=namespace: ).*')
