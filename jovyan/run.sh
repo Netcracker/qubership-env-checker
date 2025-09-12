@@ -168,7 +168,7 @@ extract_notebook_execution_metrics() {
 
 # $1 - executed notebook path
 reportToS3() {
-    if [[ $(echo ${reports[@]} | fgrep -w "s3") ]]; then
+    if [[ $(echo "${reports[@]"} | fgrep -w "s3") ]]; then
         python -c "import infra.s3 as s3; s3.uploadReportsByExecutedNotebookPath('$1')"
     fi
 }
@@ -248,7 +248,7 @@ runSingleNotebook() {
 reportToPdf() {
    if $pdf_reporting_enabled ;
       then
-      if [[ $(echo ${reports[@]} | fgrep -w "pdf") ]]; then
+      if [[ $(echo "${reports[@]"} | fgrep -w "pdf") ]]; then
           echo "report to $1.pdf"
           jupyter nbconvert --to pdf $out_path/$1
           outs+=("$out_path/"$1".pdf")
@@ -259,7 +259,7 @@ reportToPdf() {
 }
 
 reportToHtml() {
-   if [[ $(echo ${reports[@]} | fgrep -w "html") ]]; then
+   if [[ $(echo "${reports[@]"} | fgrep -w "html") ]]; then
        html_reporting_enabled=true
    fi
    if $html_reporting_enabled ;
@@ -270,7 +270,7 @@ reportToHtml() {
 }
 
 reportToJson() {
-   if [[ $(echo ${reports[@]} | fgrep -w "json") ]]; then
+   if [[ $(echo "${reports[@]"} | fgrep -w "json") ]]; then
        json_reporting_enabled=true
    fi
    if $json_reporting_enabled ;
@@ -280,7 +280,7 @@ reportToJson() {
 }
 
 reportToMonitoring() {
-    if [[ $(echo ${reports[@]} | fgrep -w "monitoring") ]]; then
+    if [[ $(echo "${reports[@]"} | fgrep -w "monitoring") ]]; then
         python -c "from monitoringUtils import MonitoringHelper; MonitoringHelper.pushNotebookExecutionResultsToMonitoringByExecutedNotebookPath('$1')"
     fi
 }
@@ -356,7 +356,7 @@ while getopts ":p:y:j:r:e:o:-:" opt; do
         read -ra reports <<< ${OPTARG}
         IFS=$DEFAULT_IFS
         if [ ${#reports[@]} -gt 0 ]; then
-            echo ${reports[@]}
+            echo "${reports[@]"}
         fi
         ;;
     ?)
