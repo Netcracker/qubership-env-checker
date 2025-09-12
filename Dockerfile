@@ -1,5 +1,4 @@
 FROM debian:bookworm-slim
-LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
 
 ARG NB_USER="jovyan"
 ARG NB_UID="1000"
@@ -16,7 +15,6 @@ RUN apt-get update --yes && \
     apt-get install --yes --no-install-recommends \
     bzip2 \
     locales \
-    sudo \
     tini \
     wget \
     ca-certificates && \
@@ -48,8 +46,6 @@ RUN sed -i 's/^#force_color_prompt=yes/force_color_prompt=yes/' /etc/skel/.bashr
 # Create NB_USER with name jovyan user with UID=1000 and in the 'users' group
 # and make sure these dirs are writable by the `users` group.
 RUN echo "auth requisite pam_deny.so" >> /etc/pam.d/su && \
-    sed -i.bak -e 's/^%admin/#%admin/' /etc/sudoers && \
-    sed -i.bak -e 's/^%sudo/#%sudo/' /etc/sudoers && \
     useradd -l -m -s /bin/bash -N -u "${NB_UID}" "${NB_USER}" && \
     mkdir -p "${CONDA_DIR}" && \
     chown "${NB_USER}:${NB_GID}" "${CONDA_DIR}" && \
@@ -212,33 +208,35 @@ WORKDIR /tmp
 RUN mamba install --yes \
         'traitlets<5.10' \
         'notebook' \
-        'jupyterlab-lsp=5.1.0' \
-        'jupyter-lsp=2.2.5' \
-        'jupyterhub=5.1.0' \
-        'jupyterlab=4.2.4' \
+        'jupyterlab-lsp=5.2.0' \
+        'jupyter-lsp=2.2.6' \
+        'jupyterhub=5.3.0' \
+        'jupyterlab=4.4.5' \
     && \
     jupyter notebook --generate-config && \
     mamba clean --all -f -y && \
     npm cache clean --force && \
     jupyter lab clean && \
     rm -rf "/home/${NB_USER}/.cache/yarn" && \
-    fix-permissions "${CONDA_DIR}" && \
-    fix-permissions "/home/${NB_USER}"
+    fix-permissions "${CONDA_DIR}"
 
 ENV JUPYTER_PORT=8888
 EXPOSE $JUPYTER_PORT
 
 # Copy local files as late as possible to avoid cache busting
 COPY installation/shells/start-notebook.sh installation/shells/start-singleuser.sh /usr/local/bin/
-# Copy local files as late as possible to avoid cache busting
-COPY installation/shells/start.sh /usr/local/bin/
+# Copy scripts and their dependencies
+COPY --chown="${NB_UID}:${NB_GID}" "/${NB_USER}/" "/home/${NB_USER}/"
+RUN chown -R "${NB_UID}:${NB_GID}" "/home/${NB_USER}/" && \
+    fix-permissions "/home/${NB_USER}"
+
 # Currently need to have both jupyter_notebook_config and jupyter_server_config to support classic and lab
 COPY installation/python/jupyter_server_config.py installation/python/docker_healthcheck.py /etc/jupyter/
 
 RUN chmod +x /usr/local/bin/start-notebook.sh && \
     chmod +x /usr/local/bin/start.sh
 
-#debug for get jupiterlab --version
+# debug: print jupyter lab version
 RUN jupyter lab --version
 
 # Configure container startup
@@ -250,7 +248,7 @@ RUN sed -re "s/c.ServerApp/c.NotebookApp/g" \
     fix-permissions /etc/jupyter/
 
 # HEALTHCHECK documentation: https://docs.docker.com/engine/reference/builder/#healthcheck
-# This healtcheck works well for `lab`, `notebook`, `nbclassic`, `server` and `retro` jupyter commands
+# This healthcheck works well for `lab`, `notebook`, `nbclassic`, `server`, and `retro` Jupyter commands
 # https://github.com/jupyter/docker-stacks/issues/915#issuecomment-1068528799
 HEALTHCHECK --interval=5s --timeout=3s --start-period=5s --retries=3 \
     CMD /etc/jupyter/docker_healthcheck.py || exit 1
@@ -315,7 +313,6 @@ RUN mamba install --yes \
     'pika' \
     'pillow>=10.2.0' \
     'prettytable' \
-    'protobuf' \
     'psycopg2' \
     'pyarrow>=14.0.1' \
     'pymongo' \
@@ -349,5 +346,5 @@ USER ${NB_UID}
 # Add R mimetype option to specify how the plot returns from R to the browser
 COPY --chown=${NB_UID}:${NB_GID} installation/Rprofile.site /opt/conda/lib/R/etc/
 
-# Disable notifications for update Juputer Lab
+# Disable notifications for JupyterLab update notifications
 RUN jupyter labextension disable "@jupyterlab/apputils-extension:announcements"

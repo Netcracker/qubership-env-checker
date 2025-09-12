@@ -1,6 +1,9 @@
 #!/bin/bash
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
+#
+# Modified by NetCracker Technology Corporation, 2024-2025
+# Original file from: https://github.com/jupyter/docker-stacks
 
 # set permissions on a directory
 # after any installation, if a directory needs to be (human) user-writable, run this script on it.

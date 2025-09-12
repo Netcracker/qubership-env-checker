@@ -1,1 +1,3 @@
-**/charts/*/templates
+**/.github/workflows/*
+**/charts/*/*
+**/charts/*/templates/*.yaml

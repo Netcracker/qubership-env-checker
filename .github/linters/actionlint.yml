@@ -3,9 +3,11 @@ paths:
     ignore:
       - 'shellcheck reported issue in this script: SC2086:info.+'
       - 'shellcheck reported issue in this script: SC2002:style.+'
-      - 'when a reusable workflow is called with "uses", "steps" is not available. only following keys are allowed: "name", "uses", "with", "secrets", "needs", "if", and "permissions" in job "update-pr-body"'
-      - 'step must run script with "run" section or run action with "uses" section'
-  .github/workflows/build.yaml:
+  workflows-templates/**/*.{yml,yaml}:
     ignore:
-      - 'property "postfix" is not defined in object type {}'
-      - 'property "context" is not defined in object type {file: string; name: string}'
+      - 'shellcheck reported issue in this script: SC2086:info.+'
+      - 'shellcheck reported issue in this script: SC2002:style.+'
+  actions/**/*.{yml,yaml}:
+    ignore:
+      - 'shellcheck reported issue in this script: SC2086:info.+'
+      - 'shellcheck reported issue in this script: SC2002:style.+'
