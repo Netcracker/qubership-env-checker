@@ -191,19 +191,23 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update --yes && \
         texlive-plain-generic && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Jupyter Notebook, Lab, and Hub
+# Install Dependencies by mamba: 
+#   traitlets - required by jupyterlab. Without the library, the JupyterLab/Notebook/Server configuration
+#   will be broken. Using a version less than 5.10 to avoid conflicts with jupyter packages.
+#   notebook - required by jupyterlab (UI start)
+#   jupyterlab-lsp- фронтенд расширение JupyterLab (UI: подсветка ошибок, автодополнение, переход к определению и т.п.).
+#   jupyter-lsp - серверное расширение Jupyter для проксирования Language Server Protocol.
+#   jupyterlab - required for UI start
 # Generate a notebook server config
 # Cleanup temporary files
-# Correct permissions
-# Do all this in a single RUN command to avoid duplicating all of the
-# files across image layers when the permissions change
+# todo: jupyterlab-lsp and jupyter-lsp are disable because they shoud work with separate LSP-server (pylsp)
 WORKDIR /tmp
 RUN mamba install --yes \
         'traitlets<5.10' \
         'notebook' \
-        'jupyterlab-lsp=5.2.0' \
-        'jupyter-lsp=2.2.6' \
-        'jupyterhub=5.3.0' \
+        #'jupyterlab-lsp=5.2.0' \
+        #'jupyter-lsp=2.2.6' \
+        #'jupyterhub=5.3.0' \
         'jupyterlab=4.4.5' \
     && \
     jupyter notebook --generate-config && \
@@ -218,12 +222,9 @@ ENV JUPYTER_PORT=8888
 EXPOSE $JUPYTER_PORT
 
 # Copy local files as late as possible to avoid cache busting
-COPY installation/shells/start.sh installation/shells/start-notebook.sh /usr/local/bin/
+COPY --chmod=0755 installation/shells/start.sh installation/shells/start-notebook.sh /usr/local/bin/
 # Currently need to have both jupyter_notebook_config and jupyter_server_config to support classic and lab
 COPY installation/python/jupyter_server_config.py installation/python/docker_healthcheck.py /etc/jupyter/
-
-RUN chmod +x /usr/local/bin/start-notebook.sh && \
-    chmod +x /usr/local/bin/start.sh
 
 # debug: print jupyter lab version
 RUN jupyter lab --version
@@ -236,12 +237,6 @@ RUN sed -re "s/c.ServerApp/c.NotebookApp/g" \
     /etc/jupyter/jupyter_server_config.py > /etc/jupyter/jupyter_notebook_config.py && \
     fix-permissions /etc/jupyter/
 
-# HEALTHCHECK documentation: https://docs.docker.com/engine/reference/builder/#healthcheck
-# This healthcheck works well for `lab`, `notebook`, `nbclassic`, `server`, and `retro` Jupyter commands
-# https://github.com/jupyter/docker-stacks/issues/915#issuecomment-1068528799
-HEALTHCHECK --interval=5s --timeout=3s --start-period=5s --retries=3 \
-    CMD /etc/jupyter/docker_healthcheck.py || exit 1
-
 WORKDIR "${HOME}"
 
 # Disabling notifications in the UI at startup
@@ -249,7 +244,7 @@ WORKDIR "${HOME}"
 #    chown -R "${NB_USER}:${NB_GID}" /usr/local/etc/jupyter && \
 #    jupyter labextension disable --level=system "@jupyterlab/apputils-extension:announcements"
 
-# Download and install kubectl
+# Autodiscovery the latest version of kubectl, downloads and install it
 RUN KUBECTL_VERSION="$(curl -Ls https://dl.k8s.io/release/latest.txt)"; \
     wget --progress=dot:giga -O /usr/local/bin/kubectl-${KUBECTL_VERSION} https://dl.k8s.io/${KUBECTL_VERSION}/bin/linux/amd64/kubectl && \
     chmod +x /usr/local/bin/kubectl-${KUBECTL_VERSION} && \
