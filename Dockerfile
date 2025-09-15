@@ -191,7 +191,7 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update --yes && \
         texlive-plain-generic && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Dependencies by mamba: 
+# Install Dependencies by mamba:
 #   traitlets - required by jupyterlab. Without the library, the JupyterLab/Notebook/Server configuration
 #   will be broken. Using a version less than 5.10 to avoid conflicts with jupyter packages.
 #   notebook - required by jupyterlab (UI start)
@@ -209,14 +209,14 @@ RUN mamba install --yes \
         #'jupyter-lsp=2.2.6' \
         #'jupyterhub=5.3.0' \
         'jupyterlab=4.4.5' \
+        'nodejs=20.19.4' \
     && \
     jupyter notebook --generate-config && \
     mamba clean --all -f -y && \
     npm cache clean --force && \
     jupyter lab clean && \
     rm -rf "/home/${NB_USER}/.cache/yarn" && \
-    fix-permissions "${CONDA_DIR}" && \
-    fix-permissions "/home/${NB_USER}"
+    fix-permissions "${CONDA_DIR}"
 
 ENV JUPYTER_PORT=8888
 EXPOSE $JUPYTER_PORT
@@ -225,6 +225,10 @@ EXPOSE $JUPYTER_PORT
 COPY --chmod=0755 installation/shells/start.sh installation/shells/start-notebook.sh /usr/local/bin/
 # Currently need to have both jupyter_notebook_config and jupyter_server_config to support classic and lab
 COPY installation/python/jupyter_server_config.py installation/python/docker_healthcheck.py /etc/jupyter/
+
+COPY --chown="${NB_UID}:${NB_GID}" "/${NB_USER}/" "/home/${NB_USER}/"
+RUN chown -R "${NB_UID}:${NB_GID}" "/home/${NB_USER}/" && \
+    fix-permissions "/home/${NB_USER}"
 
 # debug: print jupyter lab version
 RUN jupyter lab --version
