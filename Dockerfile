@@ -200,7 +200,7 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update --yes && \
 #   jupyterlab - required for UI start
 # Generate a notebook server config
 # Cleanup temporary files
-# todo: jupyterlab-lsp and jupyter-lsp are disable because they shoud work with separate LSP-server (pylsp)
+# todo: jupyterlab-lsp and jupyter-lsp are disable because they should work with separate LSP-server (pylsp)
 WORKDIR /tmp
 RUN mamba install --yes \
         'traitlets<5.10' \
@@ -223,15 +223,12 @@ EXPOSE $JUPYTER_PORT
 
 # Copy local files as late as possible to avoid cache busting
 COPY --chmod=0755 installation/shells/start.sh installation/shells/start-notebook.sh /usr/local/bin/
-# Currently need to have both jupyter_notebook_config and jupyter_server_config to support classic and lab
-COPY installation/python/jupyter_server_config.py installation/python/docker_healthcheck.py /etc/jupyter/
-
-COPY --chown="${NB_UID}:${NB_GID}" "/${NB_USER}/" "/home/${NB_USER}/"
-RUN chown -R "${NB_UID}:${NB_GID}" "/home/${NB_USER}/" && \
-    fix-permissions "/home/${NB_USER}"
-
-# debug: print jupyter lab version
-RUN jupyter lab --version
+# Currently need to have jupyter_server_config to support jupyterlab
+COPY installation/python/jupyter_server_config.py /etc/jupyter/
+# Copy user's working files (relative path from context)
+COPY --chown="${NB_UID}:${NB_GID}" jovyan/ "/home/${NB_USER}/"
+# Use the script for set permissions on a directory
+RUN fix-permissions "/home/${NB_USER}"
 
 # Configure container startup
 CMD ["/usr/local/bin/start-notebook.sh"]
@@ -243,11 +240,6 @@ RUN sed -re "s/c.ServerApp/c.NotebookApp/g" \
 
 WORKDIR "${HOME}"
 
-# Disabling notifications in the UI at startup
-#RUN mkdir -p /usr/local/etc/jupyter && \
-#    chown -R "${NB_USER}:${NB_GID}" /usr/local/etc/jupyter && \
-#    jupyter labextension disable --level=system "@jupyterlab/apputils-extension:announcements"
-
 # Autodiscovery the latest version of kubectl, downloads and install it
 RUN KUBECTL_VERSION="$(curl -Ls https://dl.k8s.io/release/latest.txt)"; \
     wget --progress=dot:giga -O /usr/local/bin/kubectl-${KUBECTL_VERSION} https://dl.k8s.io/${KUBECTL_VERSION}/bin/linux/amd64/kubectl && \
@@ -255,7 +247,7 @@ RUN KUBECTL_VERSION="$(curl -Ls https://dl.k8s.io/release/latest.txt)"; \
     ln -sf /usr/local/bin/kubectl-${KUBECTL_VERSION} /usr/local/bin/kubectl
 
 # Download and install yq
-RUN wget --progress=dot:giga https://github.com/mikefarah/yq/releases/download/v4.47.1/yq_linux_amd64.tar.gz && \
+RUN wget --progress=dot:giga https://github.com/mikefarah/yq/releases/download/v4.47.2/yq_linux_amd64.tar.gz && \
     tar -xzvf yq_linux_amd64.tar.gz -C /usr/bin/ && \
     mv /usr/bin/yq_linux_amd64 /usr/bin/yq && \
     chmod +x /usr/bin/yq && \
@@ -266,60 +258,49 @@ RUN wget --progress=dot:giga https://github.com/mikefarah/yq/releases/download/v
 #RUN apt -o Acquire::Check-Valid-Until=false update
 #RUN apt install golang -y
 
-# Install additional packages
+# Install additional packages:
+#   aiohttp - async HTTP library
+#   beautifulsoup4 (bs4) -  HTML/XML parsing
+#   boto3 - AWS SDK for Python
+#   bottleneck - accelerator for numeric arrays with missing values (NaN). Can used automatically by pandas
+#   jupyter_server - backend mandatory to start jupyterlab. Serves the kernel, file system, terminals, REST API and extensions
+#   opentelemetry-api/opentelemetry-sdk/opentelemetry-semantic-conventions - telemetry API/SDK, resources, and metrics
+#   pandas - data storage and processing (tabular analysis)
+#   papermill - parameterization and programmatic launch of Jupyter notebooks
+#   python-kubernetes: Python client library for the Kubernetes API
+#   scrapbook - saving notebook artifacts and metadata
+#   urllib3 - low-level HTTP client
+#   widgetsnbextension: Jupyter Notebook extension that enables interactive widgets in notebook cells (sliders, buttons, text boxes).
 RUN mamba install --yes \
     'aiohttp>=3.9.2' \
-    'aiosmtplib' \
-    'altair' \
     'beautifulsoup4' \
-    'blas' \
-    'bokeh' \
     'boto3' \
     'bottleneck' \
-    'cassandra-driver' \
-    'clickhouse-driver' \
-    'cloudpickle' \
-    'cython' \
-    'dask' \
-    'dill' \
-    'fonttools>=4.43.0' \
-    'h5py' \
-    'ipympl' \
-    'ipywidgets' \
     'jupyter_server>=2.0.0' \
-    'kafka-python' \
-    'matplotlib-base' \
-    'numba' \
-    'numexpr' \
     'opentelemetry-api' \
     'opentelemetry-sdk' \
     'opentelemetry-semantic-conventions' \
-    'openpyxl' \
     'pandas' \
     'papermill' \
-    'patsy' \
-    'pika' \
-    'pillow>=10.2.0' \
-    'prettytable' \
-    'psycopg2' \
-    'pyarrow>=14.0.1' \
-    'pymongo' \
-    'pypdf2' \
-    'pytables' \
     'python-kubernetes' \
-    'python-snappy' \
-    'scikit-image' \
-    'scikit-learn' \
-    'scipy' \
     'scrapbook' \
-    'seaborn' \
-    'sqlalchemy' \
-    'statsmodels' \
-    'sympy' \
     'urllib3>=2.0.6' \
     'widgetsnbextension' \
-    'xlrd' \
-    'xlsxwriter' \
+    # 'aiosmtplib' \ - async SMTP email sending
+    # 'altair' \     - interactive data visualization in JupyterLab. Describe a chart → compiled to Vega‑Lite → Jupyter frontend renders it interactively
+    # 'blas' \       - low-level linear algebra routines (vectors, matrices, solving systems). Pulled in transitively by NumPy/SciPy/scikit‑learn/statsmodels
+    # 'bokeh' \      - interactive web visualizations (plots/UI widgets) in browser/Jupyter
+    # 'dask' \       - framework for parallel and distributed computing. Can help with parsing heavy files
+    # 'ipympl' \     - renders Matplotlib as a widget; enables interactive editing and toolbar in notebooks
+    # 'ipywidgets' \ - a set of interactive widgets for Jupyter (sliders, selects, checkboxes, buttons, etc.)
+    # 'matplotlib-base' \ - plotting library (lines, points, bars, histograms, heatmaps) with full styling control (axes, legends, annotations, styles) and export to PNG/SVG/PDF.
+    # 'openpyxl' \ - read/write Excel XLSX files; create sheets, write cells, styles, formulas, charts, images, data validation.
+    # 'pillow>=10.2.0' \ - standard image processing/manipulation library for Python (PNG/JPEG/WebP/TIFF…)
+    # 'prettytable' \ - printing neat signs in terminal/log
+    # 'pyarrow>=14.0.1' \ - columnar in‑memory tables, fast storage formats (Parquet, Feather), I/O and memory efficiency; interoperates with pandas/NumPy
+    # 'pypdf2' \ - PDF manipulation — read/merge/split, rotate/crop/number, encrypt/decrypt, watermarks. Does not render or redraw pages
+    # 'pytables' \ - high‑level HDF5 wrapper for tabular/hierarchical data. Use for large on‑disk tables with fast filters/indexes and row‑wise appends
+    # 'sqlalchemy' \ - RDBMS access library (PostgreSQL, MySQL, SQLite); provides SQL execution tools and an ORM for working with databases.
     'yaml' && \
     mamba clean --all -f -y && \
     fix-permissions "${CONDA_DIR}" && \
