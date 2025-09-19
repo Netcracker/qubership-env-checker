@@ -31,7 +31,7 @@ Example command to execute a bulk run described in YAML:
 bash run.sh tests/composite_test.yaml
 ```
 
-As a result, two sample notebooks will be executed: one that runs all unit tests, and a second minimal test notebook 
+As a result, two sample notebooks will be executed: one that runs all unit tests, and a second minimal test notebook
 used by the unit tests. This setup is provided solely to demonstrate how bulk runs work.
 
 ### 2) Run the composite test notebook
