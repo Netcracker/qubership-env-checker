@@ -75,6 +75,14 @@ spec:
             {{- include "envchecker.pod.volumeMounts" . | nindent 12 }}
           resources:
             {{- include "envchecker.pod.resources" . | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: /api
+              port: web
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
           readinessProbe:
             tcpSocket:
               port: web
@@ -84,8 +92,8 @@ spec:
           livenessProbe:
             tcpSocket:
               port: web
-            initialDelaySeconds: 10
-            periodSeconds: 10
+            initialDelaySeconds: 30
+            periodSeconds: 20
             timeoutSeconds: 5
           securityContext:
             readOnlyRootFilesystem: {{ .Values.READONLY_CONTAINER_FILE_SYSTEM_ENABLED }}

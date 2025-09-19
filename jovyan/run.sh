@@ -11,54 +11,42 @@ html_reporting_enabled=false
 json_reporting_enabled=false
 clear_out=true
 print_usage(){
-    echo -e "   \033[1mUsage:\033[0m ./run.sh [OPTIONS] [-PARAM_NAME=PARAM_VALUE]  COMPOSITE_FILE_PATH|NOTEBOOK_FILE_PATH"
-    echo -e "   \033[1mExecutes "
-    echo -e "   \033[1m - a single notebook with optional parameters:\033[0m"
-    echo -e "   \033[1m - list of notebooks with optional parameters from a composite file:\033[0m"
-    echo -e "   \033[1musage example:\033[0m"
-    echo -e "   \t./run.sh notebooks/Test.ipynb         \033[36m                  #Run a single notebook with no params and no reports\033[0m"
-    echo -e "   \t./run.sh --namespaces=my_namespace notebooks/Test.ipynb  \033[36m#Run a single notebook with param/value 'namespace'/'my_namespace' and no reports\033[0m"
-    echo -e "   \t./run.sh -y\"checks:"
-    echo -e "   \t  - path: notebooks/Test.ipynb  "
-    echo -e "   \t    params:"
-    echo -e "   \t      namespace: my_namespace"
-    echo -e "   \t      version_file_name: versions/release1.0.0.yaml"
-    echo -e "   \t      report_name: test_report""     \033[36m       \t\t\t\t #Run a composite described in console\033[0m"          
-    echo -e "   \t./run.sh customComposite.yaml \033[36m       \t\t\t\t\t  #Run all notebooks listed in composite\033[0m"
-    echo -e "   \t./run.sh --pdf=false --html=true notebooks/Test.ipynb \033[36m #Run Test.ipynb script with disabled pdf reporting and enabled html reporting \033[0m"
-    echo -e "   \033[1m Parameters provisioning in case of a single notebook execution:\033[0m"
-    echo -e "   \t You can provide a parameter value into a notebook through --param_name=value as options in command line:"
-    echo -e "   \t Examples:"
-    echo -e "   \t ./run.sh --namespace=my_namespace --app=env-checker notebook/Test.ipynb"
-    echo -e "   \t ./run.sh --namespaces=[my_namespace1,my_namespace2] --apps=[app1,app2] notebook/Test.ipynb"
-    echo -e "   \033[1m Options:\033[0m"
-    echo -e "   \033[1m  -r 1m[s3|monitoring|pdf] (o)\033[0m  #Upload results to corresponding services passed as a string separated by comma. Example: -r s3,monitoring,pdf"
-    echo -e "   \033[1m  -y 1m (o)\033[0m  #Run yaml configuration. In this case file does not matter, due to composite was provided in console"
-    echo -e "   \033[1m  -j 1m (o)\033[0m  #Run json configuration. In this case file does not matter, due to composite was provided in console"
-    echo -e "   \033[1m  -e 1m (o)\033[0m  #Executes the Python script and then runs the yaml obtained during the execution of the python script"
-    echo -e "   \033[1m  -o 1m (o)\033[0m  #A flag that allows to specify a subfolder in the './out' folder in which reports will be stored "
-    echo -e "   \033[1m  --pdf=false 1m (o)\033[0m  #Disable pdf report generation"
-    echo -e "   \033[1m  --html=true 1m (o)\033[0m  #Enable generation of html reports from notebooks with scrapbook data"
-    echo -e "   \033[1m Composite file example:\033[0m"
-    echo -e "  \tchecks:  # The list of notebooks to execute
-                  - path: notebooks/Test1.ipynb  # path to a notebook
-                    params:       # The list of parameters will be passed to a notebook
-                        namespace: my_namespace
-                        version_file_name: versions/release1.0.0.yaml
-                        alias: my_test
-                        bulk_check_file_name: my_test_report
-                  - path: notebooks/Test2.ipynb
-                    params:
-                        namespace: my_namespace
-                        version_file_name: versions/release1.0.0.yaml
-                        bulk_check_file_name: my_test_report"
+    echo -e "   \033[1mUsage:\033[0m bash run.sh [OPTIONS] [-PARAM_NAME=PARAM_VALUE] COMPOSITE_FILE_PATH|NOTEBOOK_FILE_PATH"
+    echo -e "   \033[1mExecutes:\033[0m"
+    echo -e "     - a single notebook with optional parameters"
+    echo -e "     - a list of notebooks with parameters from a composite file"
+    echo -e "   \033[1mExamples:\033[0m"
+    echo -e "     bash run.sh /home/jovyan/tests/notebooks/test_notebook.ipynb                         \033[36m# single notebook (no reports)\033[0m"
+    echo -e "     bash run.sh --namespace=my_ns /home/jovyan/tests/notebooks/test_notebook.ipynb       \033[36m# single with param\033[0m"
+    echo -e "     bash run.sh --pdf=false --html=true /home/jovyan/tests/notebooks/test_notebook.ipynb \033[36m# disable PDF, enable HTML\033[0m"
+    echo -e "     bash run.sh --html=true tests/CompositeUnitTestNotebook.ipynb                        \033[36m# composite notebook (runs all unit checks)\033[0m"
+    echo -e "     bash run.sh tests/composite_test.yaml                                                \033[36m# composite YAML bulk run\033[0m"
+    echo -e "   \033[1mParameters for a single notebook:\033[0m"
+    echo -e "     pass as --param=value on the command line"
+    echo -e "     e.g. --namespace=my_ns --app=env-checker"
+    echo -e "   \033[1mOptions (o-optional, m-mandatory):\033[0m"
+    echo -e "   \033[1m  -r 1m[s3|monitoring|pdf] (o)\033[0m  \033[36m# Upload results to corresponding services (comma-separated), e.g. -r s3,monitoring,pdf\033[0m"
+    echo -e "   \033[1m  -y 1m (o)\033[0m                  \033[36m# Run YAML configuration provided inline (file path is ignored)\033[0m"
+    echo -e "   \033[1m  -j 1m (o)\033[0m                  \033[36m# Run JSON configuration provided inline (file path is ignored)\033[0m"
+    echo -e "   \033[1m  -e 1m (o)\033[0m                  \033[36m# Execute a Python script that outputs YAML, then run that YAML\033[0m"
+    echo -e "   \033[1m  -o 1m (o)\033[0m                  \033[36m# Place outputs under './out/<subfolder>'\033[0m"
+    echo -e "   \033[1m  --pdf=false 1m (o)\033[0m         \033[36m# Disable PDF report generation\033[0m"
+    echo -e "   \033[1m  --html=true 1m (o)\033[0m         \033[36m# Enable HTML summary generation from scrapbook data\033[0m"
+    echo -e "   \033[1mComposite YAML example:\033[0m"
+    echo -e "     checks:"
+    echo -e "       - path: /home/jovyan/tests/notebooks/test_notebook.ipynb"
+    echo -e "         params:"
+    echo -e "           namespace: my_namespace"
+    echo -e "       - path: /home/jovyan/tests/CompositeUnitTestNotebook.ipynb"
+    echo -e "         params:"
+    echo -e "           report_name: CompositeUnitTestBulkNotebook"
     echo -e "   \033[1m Reports:\033[0m"
     echo -e "  \trunner converts results to pdf by default. Other reports you have to enable using -r flag."
     echo -e "  \tIn case of -r flag, the runner includes only reports mentioned in the list: "
     echo -e "  \tExample: "
-    echo -e "  \t\t-r s3,pdf: report results to s3 and pdf"
-    echo -e "  \t\t-r s3: report results to s3 only. Reporting to PDF is disabled here"
-    echo -e "  \t\t-r '': disable all reports"
+    echo -e "          -r s3,pdf: report results to s3 and pdf"
+    echo -e "          -r s3: report results to s3 only. Reporting to PDF is disabled here"
+    echo -e "          -r '': disable all reports"
     echo -e ""
 }
 
@@ -66,7 +54,7 @@ prepareOutput() {
     if [ "$clear_out" = false ]; then
         return
     fi
-    
+
     if [ -d "/home/jovyan/out" ]; then
         find /home/jovyan/out -type d -empty -delete          # delete all empty catalogs in './out' folder
         find /home/jovyan/out -maxdepth 1 -type f -delete     # delete all files in './out' folder (except for non-empty subfolders)
@@ -114,10 +102,10 @@ calculate_composite_notebook_path() {
 extract_notebook_execution_metrics() {
     report_name=$(basename -- "$1" | sed -nr 's/([a-zA-Z0-9_]+)_[0-9]+\.ipynb/\1/p' | awk '{print tolower($0)}')
     # try to extract 'metrics' scrap from executed notebook
-    metrics=$(python -c "import nb_data_manipulation_utils; nb_data_manipulation_utils.extract_metrics_from_nb_scraps('$1')")
+    metrics=$(python -c "import nb_data_manipulation_utils as m; print(m.extract_metrics_from_nb_scraps('$1'))" 2>/dev/null || echo '{}')
     if [ "$metrics" != '{}' ] ; then
         # if such scrap was extracted, validate its content with json schema
-        metrics_validation_res=$(python -c "import json_schema_validation; json_schema_validation.validate_app_metrics_schema('$metrics')")
+        metrics_validation_res=$(python -c "import json_schema_validation as v; print(v.validate_app_metrics_schema('$metrics'))" 2>/dev/null || echo 1)
         if [[ (-n $metrics_validation_res) && ($metrics_validation_res -eq 0) ]] ; then
             #if scrap structure is valid, check optional fields (report_app, initiator, start_time, duration) and, if they don't present, set them
             if [[ "$3" != "null" ]] ; then
@@ -223,7 +211,7 @@ runSingleNotebook() {
         papermill "$script_path" -y "$params" -y "result_file_path: $out_script_name_without_ext" -y "out_path: $out_path" "$out_script_path"
     fi
 
-    res=$(/home/jovyan/utils/parseOut.py < "$out_script_path")
+    res=$(python /home/jovyan/utils/parseOut.py < "$out_script_path")
     outs=("$out_script_path")
 
     if [[ -z $res ]]; then
@@ -245,10 +233,14 @@ runSingleNotebook() {
     reportToPdf "$out_script_name_without_ext"
     outs=("${outs[@]}")
     params_as_json_str=$(echo "$params" | yq -oj -I0)
+    if [[ -z "$params_as_json_str" || "$params_as_json_str" == "null" ]]; then params_as_json_str='{}'; fi
+
     outs_as_json_str=$(echo "[${outs//${IFS:0:1}/,}]" | yq -oj -I0)
-    output=$(python -c "import env_checker_utils as utils; print(utils.get_related_reports('$out_script_path','$outs_as_json_str','$out_path'))")
+    if [[ -z "$outs_as_json_str" || "$outs_as_json_str" == "null" ]]; then outs_as_json_str='[]'; fi
+
+    output=$(python -c "import env_checker_utils as utils; print(utils.get_related_reports('$out_script_path','$outs_as_json_str','$out_path'))" 2>/dev/null || echo "[]")
     outs_as_json_str=$output
-    yq ".checks += {\"path\":\"$script_path\", \"outs\": $outs_as_json_str, \"result\":\"$res\", \"params\":$params_as_json_str, \"metrics\":$metrics}" "$composite_result_file_path" -i
+    yq ".checks += {\"path\":\"$script_path\", \"outs\": $outs_as_json_str, \"result\":\"$res\", \"params\":$params_as_json_str, \"metrics\":$metrics}" "$composite_result_file_path" -i || true
     reportToS3 "$out_script_path"
     reportToMonitoring "$out_script_path"
 
@@ -274,7 +266,7 @@ reportToHtml() {
    fi
    if $html_reporting_enabled ;
    then
-       /home/jovyan/utils/report_generator.py "$out_path"
+       python /home/jovyan/utils/report_generator.py "$out_path"
    fi
 }
 
@@ -363,7 +355,7 @@ while getopts ":p:y:j:r:e:o:-:" opt; do
     o)
         output_subfolder=${OPTARG}
         echo "output_subfolder: $output_subfolder"
-        ;;        
+        ;;
     r)
         DEFAULT_IFS=$IFS
         IFS=','
