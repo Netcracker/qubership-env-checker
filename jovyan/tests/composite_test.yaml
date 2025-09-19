@@ -1,0 +1,12 @@
+# The example of bulk run notebooks via run.sh orchestrator.
+# For run just call command in terminal from /home/jovyan directory: bash run.sh tests/composite_test.yaml
+checks:
+#check Cloud Passport Layout Check with domain filter
+  - path: tests/notebooks/test_notebook.ipynb
+    params:
+      namespace: example_bulk_namespace
+
+#check Cloud Passport Layout Check without domain filter
+  - path: tests/CompositeUnitTestNotebook.ipynb
+    params:
+      report_name: CompositeUnitTestBulkNotebook
