@@ -5,7 +5,7 @@ orchestrator.
 
 ## Layout
 
-```
+```text
 jovyan/tests/
   ├─ unittests/
   │   ├─ reports/          # HTML/PDF related tests
@@ -17,7 +17,7 @@ jovyan/tests/
 ```
 
 Notes:
-- There is one minimal example notebook in `/home/jovyan/tests/notebooks/` that can be used as a template for 
+- There is one minimal example notebook in `/home/jovyan/tests/notebooks/` that can be used as a template for
 creating your own cases (parameters + result cell).
 - Integration tests are not active yet; unit tests are the focus now.
 
@@ -56,7 +56,7 @@ bash run.sh --html=true tests/CompositeUnitTestNotebook.ipynb
 ```
 
 Results:
-- An HTML table summarizing all tests and their statuses will be generated (per-report aggregation over executed 
+- An HTML table summarizing all tests and their statuses will be generated (per-report aggregation over executed
 notebooks).
 - For each executed case you can inspect the produced `.ipynb` and, if PDF reporting is enabled (default), a `.pdf`
 under `/home/jovyan/out/`.
