@@ -31,11 +31,12 @@ Example command to execute a bulk run described in YAML:
 bash run.sh tests/composite_test.yaml
 ```
 
-В качестве результата будет выполнено 2 пробных ноутбука, один со всеми unit тестами, второй - тестовый, написанный для Unit тестов. Данный способ создан просто, чтобы показать как работают балковые запуски
+As a result, two sample notebooks will be executed: one that runs all unit tests, and a second minimal test notebook 
+used by the unit tests. This setup is provided solely to demonstrate how bulk runs work.
 
 ### 2) Run the composite test notebook
 
-`CompositeUnitTestNotebook.ipynb` orchestrates Python test scripts located under `jovyan/tests/unittests/**`. It runs 
+`CompositeUnitTestNotebook.ipynb` orchestrates Python test scripts located under `jovyan/tests/unittests/**`. It runs
 unit checks and produces:
 - a JSON report saved under `/home/jovyan/out/tests/<name>.json`,
 - scrapbook data used by HTML aggregation.
