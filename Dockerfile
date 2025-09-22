@@ -212,7 +212,7 @@ RUN mamba install --yes \
         'jupyter-lsp=2.2.6' \
         'jupyterhub=5.3.0' \
         'jupyterlab=4.4.5' \
-        'nodejs=20.19.4' \
+        'nodejs=24.8.0' \
     && \
     jupyter notebook --generate-config && \
     mamba clean --all -f -y && \
@@ -270,7 +270,7 @@ RUN KUBECTL_VERSION="$(curl -Ls https://dl.k8s.io/release/latest.txt)"; \
     ln -sf /usr/local/bin/kubectl-${KUBECTL_VERSION} /usr/local/bin/kubectl
 
 # Download and install yq
-RUN wget --progress=dot:giga https://github.com/mikefarah/yq/releases/download/v4.47.1/yq_linux_amd64.tar.gz && \
+RUN wget --progress=dot:giga https://github.com/mikefarah/yq/releases/download/v4.47.2/yq_linux_amd64.tar.gz && \
     tar -xzvf yq_linux_amd64.tar.gz -C /usr/bin/ && \
     mv /usr/bin/yq_linux_amd64 /usr/bin/yq && \
     chmod +x /usr/bin/yq && \
