@@ -204,7 +204,6 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update --yes && \
 #   jupyterlab - required for UI start
 # Generate a notebook server config
 # Cleanup temporary files
-# todo: jupyterlab-lsp and jupyter-lsp are disable because they should work with separate LSP-server (pylsp)
 WORKDIR /tmp
 RUN mamba install --yes \
         'traitlets<5.10' \
