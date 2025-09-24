@@ -209,8 +209,8 @@ WORKDIR /tmp
 RUN mamba install --yes \
         'traitlets<5.10' \
         'notebook' \
-        #'jupyterlab-lsp=5.2.0' \
-        #'jupyter-lsp=2.2.6' \
+        'jupyterlab-lsp=5.2.0' \
+        'jupyter-lsp=2.2.6' \
         #'jupyterhub=5.3.0' \
         'jupyterlab=4.4.5' \
         'nodejs=24.8.0' \
@@ -305,6 +305,7 @@ RUN mamba install --yes \
     'pandas' \
     'papermill' \
     'python-kubernetes' \
+    'python-lsp-server' \
     'scrapbook' \
     'urllib3>=2.0.6' \
     'widgetsnbextension' \
