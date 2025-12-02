@@ -2,7 +2,7 @@
 
 check_namespace() {
     local namespace="$1"
-    if ! kubectl get namespace "$namespace" > /dev/null 2>&1; then
+    if ! kubectl get namespace "$namespace" >/dev/null 2>&1; then
         printf "\033[0;31mERROR: namespace=%s does not exist.\033[0m\n" "$namespace"
         return 1
     fi
@@ -19,11 +19,10 @@ if [[ $params == "namespace:"* ]]; then
 elif [[ $params == "namespaces:"* ]]; then
     namespace_value=$(echo "$params" | grep -oP '(?<=namespaces: ).*')
     namespace_value=$(echo "$namespace_value" | tr -d '[] ')
-    IFS=',' read -ra namespaces <<< "$namespace_value"
+    IFS=',' read -ra namespaces <<<"$namespace_value"
     for ns in "${namespaces[@]}"; do
         check_namespace "$ns" || overall_result=1
     done
 fi
 
 exit $overall_result
-
