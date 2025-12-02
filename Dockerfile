@@ -1,4 +1,5 @@
-FROM debian:bookworm-slim
+ARG BUILDPLATFORM
+FROM --platform=$BUILDPLATFORM debian:trixie-slim
 
 ARG NB_USER="jovyan"
 ARG NB_UID="1000"
@@ -10,7 +11,14 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 USER root
 
-# Install all OS dependencies for notebook server that starts but lacks all features (e.g., download as all possible file formats)
+# Install all OS dependencies for notebook server (basic minimum) that starts but lacks all features
+# (e.g., download as all possible file formats). Include next dependencies:
+#   bzip2 - archiver/decompressor for .bz2 format. Needed to unpack micromamba .tar.bz2 during image build
+#   locales - localization packages to generate UTF-8 locale
+#   tini - minimal init process that handles signals and zombie processes correctly. Used as container ENTRYPOINT
+#   wget - HTTP/HTTPS file downloader. Required to fetch micromamba, run-one, kubectl, yq. Can be replaced with curl
+#   ca-certificates - root certificates for TLS, needed by all HTTP/HTTPS requests
+#   locale-gen - configure and generate locale
 RUN apt-get update --yes && \
     apt-get install --yes --no-install-recommends \
     bzip2 \
@@ -77,11 +85,14 @@ RUN set -x && \
     # Check architecture
     arch=$(uname -m) && \
     if [ "${arch}" = "x86_64" ]; then \
-        arch="64"; \
+        MAMBA_ARCH="linux-64"; \
+    elif [ "${arch}" = "aarch64" ]; then \
+        MAMBA_ARCH="linux-aarch64"; \
+    else \
+        echo "Unsupported architecture: ${arch}"; exit 1; \
     fi && \
-    echo "Architecture: ${arch}" && \
     # Download micromamba.tar.bz2
-    if ! wget -qO /tmp/micromamba.tar.bz2 https://github.com/mamba-org/micromamba-releases/releases/download/2.0.4-0/micromamba-linux-64.tar.bz2; then \
+    if ! wget -qO /tmp/micromamba.tar.bz2 https://github.com/mamba-org/micromamba-releases/releases/download/2.0.4-0/micromamba-${MAMBA_ARCH}.tar.bz2; then \
         echo "Failed to download micromamba.tar.bz2"; \
         exit 1; \
     fi && \
@@ -153,89 +164,74 @@ RUN set -x && \
 # Configure container startup
 ENTRYPOINT ["tini", "-g", "--"]
 WORKDIR "${HOME}"
-#todo duplicate is it need?
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# Download run-one file and upload to /tmp
-# Unpack the file to /opt
-# delete temp files
 # install opentelemetry exporter
-RUN wget --progress=dot:giga -O /tmp/run-one_1.17.orig.tar.gz http://security.ubuntu.com/ubuntu/pool/main/r/run-one/run-one_1.17.orig.tar.gz && \
-    tar --directory=/opt -xvf /tmp/run-one_1.17.orig.tar.gz && \
-    rm /tmp/run-one_1.17.orig.tar.gz
-
 RUN pip install --no-cache-dir \
     opentelemetry-exporter-prometheus-remote-write \
     redis
 
-# Install all OS dependencies for fully functional notebook server
+# Install all OS dependencies for fully functional notebook server:
+#   fonts-liberation - used by nbconvert (PDF/HTML export)
+#   pandoc - document converter for notebooks, used for HTML/Markdown/partial PDF
+#   curl - used to obtain kubectl version and in Jupyter UI terminal
+#   iputils-ping - network diagnostics for network/Service/Pod (ping)
+#   traceroute - show route (nodes/gateways/overlay) from the Pod to the target and where packets are lost
+#   git - VCS client, needed for GIT integration (pull notebooks)
+#   tzdata - time zones
+#   unzip - unpack .zip
+#   texlive-xetex, texlive-fonts-recommended, texlive-plain-generic - required to build PDFs from nbconvert
 RUN apt-get -o Acquire::Check-Valid-Until=false update --yes && \
     apt-get install --yes --no-install-recommends \
         fonts-liberation \
-        # - pandoc is used to convert notebooks to html files
-        #   it's not present in arch64 ubuntu image, so we install it here
         pandoc \
-        # Common useful utilities
         curl \
         iputils-ping \
         traceroute \
         git \
-        nano-tiny \
         tzdata \
         unzip \
-        vim-tiny \
-        # git-over-ssh
-        openssh-client \
-        # less is needed to run help in R
-        # see: https://github.com/jupyter/docker-stacks/issues/1588
-        less \
-        # nbconvert dependencies
-        # https://nbconvert.readthedocs.io/en/latest/install.html#installing-tex
         texlive-xetex \
         texlive-fonts-recommended \
-        texlive-plain-generic \
-        # Enable clipboard on Linux host systems
-        xclip && \
+        texlive-plain-generic && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Jupyter Notebook, Lab, and Hub
+# Install Dependencies by mamba:
+#   traitlets - required by jupyterlab. Without the library, the JupyterLab/Notebook/Server configuration
+#   will be broken. Using a version less than 5.10 to avoid conflicts with jupyter packages.
+#   notebook - required by jupyterlab (UI start)
+#   jupyterlab-lsp – jupyterLab frontend extension (UI: error highlighting, autocompletion, go to definition, etc.).
+#   jupyter-lsp – jupyter server extension for proxying Language Server Protocol.
+#   jupyterlab - required for UI start
 # Generate a notebook server config
 # Cleanup temporary files
-# Correct permissions
-# Do all this in a single RUN command to avoid duplicating all of the
-# files across image layers when the permissions change
 WORKDIR /tmp
 RUN mamba install --yes \
         'traitlets<5.10' \
         'notebook' \
         'jupyterlab-lsp=5.2.0' \
         'jupyter-lsp=2.2.6' \
-        'jupyterhub=5.3.0' \
+        #'jupyterhub=5.3.0' \
         'jupyterlab=4.4.5' \
+        'nodejs=24.8.0' \
     && \
     jupyter notebook --generate-config && \
     mamba clean --all -f -y && \
     npm cache clean --force && \
     jupyter lab clean && \
     rm -rf "/home/${NB_USER}/.cache/yarn" && \
-    fix-permissions "${CONDA_DIR}" && \
-    fix-permissions "/home/${NB_USER}"
+    fix-permissions "${CONDA_DIR}"
 
 ENV JUPYTER_PORT=8888
 EXPOSE $JUPYTER_PORT
 
 # Copy local files as late as possible to avoid cache busting
-COPY installation/shells/start-notebook.sh installation/shells/start-singleuser.sh /usr/local/bin/
-# Copy local files as late as possible to avoid cache busting
-COPY installation/shells/start.sh /usr/local/bin/
-# Currently need to have both jupyter_notebook_config and jupyter_server_config to support classic and lab
-COPY installation/python/jupyter_server_config.py installation/python/docker_healthcheck.py /etc/jupyter/
-
-RUN chmod +x /usr/local/bin/start-notebook.sh && \
-    chmod +x /usr/local/bin/start.sh
-
-# debug: print jupyter lab version
-RUN jupyter lab --version
+COPY --chmod=0755 installation/shells/start.sh installation/shells/start-notebook.sh /usr/local/bin/
+# Currently need to have jupyter_server_config to support jupyterlab
+COPY installation/python/jupyter_server_config.py /etc/jupyter/
+# Copy user's working files (relative path from context)
+COPY --chown="${NB_UID}:${NB_GID}" jovyan/ "/home/${NB_USER}/"
+# Use the script for set permissions on a directory
+RUN fix-permissions "/home/${NB_USER}"
 
 # Configure container startup
 CMD ["/usr/local/bin/start-notebook.sh"]
@@ -245,91 +241,88 @@ RUN sed -re "s/c.ServerApp/c.NotebookApp/g" \
     /etc/jupyter/jupyter_server_config.py > /etc/jupyter/jupyter_notebook_config.py && \
     fix-permissions /etc/jupyter/
 
-# HEALTHCHECK documentation: https://docs.docker.com/engine/reference/builder/#healthcheck
-# This healthcheck works well for `lab`, `notebook`, `nbclassic`, `server`, and `retro` Jupyter commands
-# https://github.com/jupyter/docker-stacks/issues/915#issuecomment-1068528799
-HEALTHCHECK --interval=5s --timeout=3s --start-period=5s --retries=3 \
-    CMD /etc/jupyter/docker_healthcheck.py || exit 1
-
 WORKDIR "${HOME}"
 
-# Disabling notifications in the UI at startup
-#RUN mkdir -p /usr/local/etc/jupyter && \
-#    chown -R "${NB_USER}:${NB_GID}" /usr/local/etc/jupyter && \
-#    jupyter labextension disable --level=system "@jupyterlab/apputils-extension:announcements"
-
-# Download and install kubectl
-RUN wget --progress=dot:giga -O kubectl-v1.32 https://dl.k8s.io/v1.32.0/bin/linux/amd64/kubectl && \
-    chmod +x ./kubectl-v1.32 && \
-    mv ./kubectl-v1.32 /usr/local/bin/ && \
-    ln -s /usr/local/bin/kubectl-v1.32 /usr/local/bin/kubectl
+# Autodiscovery the latest version of kubectl, downloads and install it
+RUN set -x && \
+    arch=$(uname -m) && \
+    if [ "${arch}" = "x86_64" ]; then \
+        KUBE_ARCH="amd64"; \
+    elif [ "${arch}" = "aarch64" ]; then \
+        KUBE_ARCH="arm64"; \
+    else \
+        echo "Unsupported architecture: ${arch}"; exit 1; \
+    fi && \
+    KUBECTL_VERSION="$(curl -Ls https://dl.k8s.io/release/latest.txt)"; \
+    wget --progress=dot:giga -O /usr/local/bin/kubectl-${KUBECTL_VERSION} https://dl.k8s.io/${KUBECTL_VERSION}/bin/linux/${KUBE_ARCH}/kubectl && \
+    chmod +x /usr/local/bin/kubectl-${KUBECTL_VERSION} && \
+    ln -sf /usr/local/bin/kubectl-${KUBECTL_VERSION} /usr/local/bin/kubectl
 
 # Download and install yq
-RUN wget --progress=dot:giga https://github.com/mikefarah/yq/releases/download/v4.45.4/yq_linux_amd64.tar.gz && \
-    tar -xzvf yq_linux_amd64.tar.gz -C /usr/bin/ && \
-    mv /usr/bin/yq_linux_amd64 /usr/bin/yq && \
+RUN set -x && \
+    arch=$(uname -m) && \
+    if [ "${arch}" = "x86_64" ]; then \
+        YQ_ARCH="amd64"; \
+    elif [ "${arch}" = "aarch64" ]; then \
+        YQ_ARCH="arm64"; \
+    else \
+        echo "Unsupported architecture: ${arch}"; exit 1; \
+    fi && \
+    wget --progress=dot:giga https://github.com/mikefarah/yq/releases/download/v4.47.2/yq_linux_${YQ_ARCH}.tar.gz && \
+    tar -xzvf yq_linux_${YQ_ARCH}.tar.gz -C /usr/bin/ && \
+    mv /usr/bin/yq_linux_${YQ_ARCH} /usr/bin/yq && \
     chmod +x /usr/bin/yq && \
-    rm yq_linux_amd64.tar.gz
+    rm yq_linux_${YQ_ARCH}.tar.gz
 
 # update apt and install go. Uncomment if someday will need to write notebooks on golang
 # apt command is not recommended for installation from Dockerfile
 #RUN apt -o Acquire::Check-Valid-Until=false update
 #RUN apt install golang -y
 
-# Install additional packages
+# Install additional packages:
+#   aiohttp - async HTTP library
+#   beautifulsoup4 (bs4) -  HTML/XML parsing
+#   boto3 - AWS SDK for Python
+#   bottleneck - accelerator for numeric arrays with missing values (NaN). Can used automatically by pandas
+#   jupyter_server - backend mandatory to start jupyterlab. Serves the kernel, file system, terminals, REST API and extensions
+#   opentelemetry-api/opentelemetry-sdk/opentelemetry-semantic-conventions - telemetry API/SDK, resources, and metrics
+#   pandas - data storage and processing (tabular analysis)
+#   papermill - parameterization and programmatic launch of Jupyter notebooks
+#   python-kubernetes: Python client library for the Kubernetes API
+#   scrapbook - saving notebook artifacts and metadata
+#   urllib3 - low-level HTTP client
+#   widgetsnbextension: Jupyter Notebook extension that enables interactive widgets in notebook cells (sliders, buttons, text boxes).
 RUN mamba install --yes \
     'aiohttp>=3.9.2' \
-    'aiosmtplib' \
-    'altair' \
     'beautifulsoup4' \
-    'blas' \
-    'bokeh' \
     'boto3' \
     'bottleneck' \
-    'cassandra-driver' \
-    'clickhouse-driver' \
-    'cloudpickle' \
-    'cython' \
-    'dask' \
-    'dill' \
-    'fonttools>=4.43.0' \
-    'h5py' \
-    'ipympl' \
-    'ipywidgets' \
     'jupyter_server>=2.0.0' \
-    'kafka-python' \
-    'matplotlib-base' \
-    'numba' \
-    'numexpr' \
     'opentelemetry-api' \
     'opentelemetry-sdk' \
     'opentelemetry-semantic-conventions' \
-    'openpyxl' \
     'pandas' \
     'papermill' \
-    'patsy' \
-    'pika' \
-    'pillow>=10.2.0' \
-    'prettytable' \
-    'psycopg2' \
-    'pyarrow>=14.0.1' \
-    'pymongo' \
-    'pypdf2' \
-    'pytables' \
     'python-kubernetes' \
-    'python-snappy' \
-    'scikit-image' \
-    'scikit-learn' \
-    'scipy' \
+    'python-lsp-server' \
     'scrapbook' \
-    'seaborn' \
-    'sqlalchemy' \
-    'statsmodels' \
-    'sympy' \
     'urllib3>=2.0.6' \
     'widgetsnbextension' \
-    'xlrd' \
-    'xlsxwriter' \
+    # 'aiosmtplib' \ - async SMTP email sending
+    # 'altair' \     - interactive data visualization in JupyterLab. Describe a chart → compiled to Vega‑Lite → Jupyter frontend renders it interactively
+    # 'blas' \       - low-level linear algebra routines (vectors, matrices, solving systems). Pulled in transitively by NumPy/SciPy/scikit‑learn/statsmodels
+    # 'bokeh' \      - interactive web visualizations (plots/UI widgets) in browser/Jupyter
+    # 'dask' \       - framework for parallel and distributed computing. Can help with parsing heavy files
+    # 'ipympl' \     - renders Matplotlib as a widget; enables interactive editing and toolbar in notebooks
+    # 'ipywidgets' \ - a set of interactive widgets for Jupyter (sliders, selects, checkboxes, buttons, etc.)
+    # 'matplotlib-base' \ - plotting library (lines, points, bars, histograms, heatmaps) with full styling control (axes, legends, annotations, styles) and export to PNG/SVG/PDF.
+    # 'openpyxl' \ - read/write Excel XLSX files; create sheets, write cells, styles, formulas, charts, images, data validation.
+    # 'pillow>=10.2.0' \ - standard image processing/manipulation library for Python (PNG/JPEG/WebP/TIFF…)
+    # 'prettytable' \ - printing neat signs in terminal/log
+    # 'pyarrow>=14.0.1' \ - columnar in‑memory tables, fast storage formats (Parquet, Feather), I/O and memory efficiency; interoperates with pandas/NumPy
+    # 'pypdf2' \ - PDF manipulation — read/merge/split, rotate/crop/number, encrypt/decrypt, watermarks. Does not render or redraw pages
+    # 'pytables' \ - high‑level HDF5 wrapper for tabular/hierarchical data. Use for large on‑disk tables with fast filters/indexes and row‑wise appends
+    # 'sqlalchemy' \ - RDBMS access library (PostgreSQL, MySQL, SQLite); provides SQL execution tools and an ORM for working with databases.
     'yaml' && \
     mamba clean --all -f -y && \
     fix-permissions "${CONDA_DIR}" && \

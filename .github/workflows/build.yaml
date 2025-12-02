@@ -1,66 +1,206 @@
+# Set repository variable PUBLISH_DOCKER_IMAGES to `true`, if you want to publish docker images to ghcr.io
 name: Build Artifacts
+
 on:
   release:
     types: [created]
   push:
     branches:
       - '**'
-    paths-ignore:
-      - '.github/**'
-      - 'docs/**'
-  workflow_dispatch:
-    inputs:
-      postfix:
-        description: 'Postfix for tag name'
-        required: false
+    paths:
+      - '**'
+      - '!.github/**'
+      - '.github/workflows/build.yaml'
+      - '!docs/**'
+  workflow_dispatch: {}
 
-env:
-  RAW_TAG_NAME: ${{ github.event.release.tag_name != '' && github.event.release.tag_name || github.ref_name }}
-  TAG_POSTFIX: ${{ inputs.postfix || '' }}
+permissions:
+  contents: read
 
 jobs:
   multiplatform_build:
+    permissions:
+      actions: read          # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
+      contents: read         # for actions/checkout and docker/metadata-action
+      packages: write        # to push Docker images to GitHub Container Registry (ghcr.io)
+      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
     strategy:
       fail-fast: false
       matrix:
         component:
           - name: qubership-env-checker
-            file: Dockerfile
             context: .
-    runs-on: ubuntu-latest
+            description: Environments Checker Base image
+            file: Dockerfile
+        platform:
+          # Platform name should be without `linux-` prefix.
+          # For runners details see https://docs.github.com/en/actions/concepts/runners/github-hosted-runners#runner-images
+          - name: amd64
+            runner: ubuntu-latest
+          - name: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.platform.runner }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Set image name
+        run: |
+          OWNER="${{ github.repository_owner }}"
+          OWNER=$(echo "${OWNER,,}" | sed -E 's/[^a-z0-9._-]+/-/g')
+          echo "FULL_IMAGE_NAME=ghcr.io/${OWNER}/${{ matrix.component.name }}" >>${GITHUB_ENV}
+        env:
+          IMAGE_NAME: '${{ github.repository }}'
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         with:
+          images: "${{ env.FULL_IMAGE_NAME }}"
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=git-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+          flavor: |
+            latest=${{ github.ref == 'refs/heads/main' }}
+          labels: |
+            org.opencontainers.image.description=${{ matrix.component.description }}
+          annotations: |
+            org.opencontainers.image.description=${{ matrix.component.description }}
+
+      - name: Login to Docker Registry
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          password: ${{secrets.GITHUB_TOKEN}}
           registry: ghcr.io
           username: ${GITHUB_ACTOR}
-          password: ${{secrets.GITHUB_TOKEN}}
-      - name: Compute image tag
-        id: tag
-        run: |
-          NAME="${RAW_TAG_NAME}"
-          # sanitize to be a valid docker tag: lowercase, replace invalid chars, max length 128
-          NAME="${NAME,,}"
-          NAME=$(echo "$NAME" | sed -E 's/[^a-z0-9._-]+/-/g')
-          # optional postfix
-          if [ -n "${TAG_POSTFIX}" ]; then
-            POSTFIX=$(echo "${TAG_POSTFIX}" | sed -E 's/[^a-z0-9._-]+/-/g')
-            NAME="${NAME}-${POSTFIX}"
-          fi
-          echo "tag=$NAME" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
       - name: Build and push
-        uses: docker/build-push-action@v6
+        id: build
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
+          context: '${{ matrix.component.context }}'
+          file: '${{ matrix.component.file }}'
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          # load: true
           no-cache: true
-          context: ${{ matrix.component.context }}
-          file: ${{ matrix.component.file }}
-          platforms: linux/amd64
-          push: ${{ github.repository_owner == 'Netcracker' }}
-          tags: ghcr.io/netcracker/${{ matrix.component.name }}:${{ steps.tag.outputs.tag }}
+          # More options for outputs: https://github.com/moby/buildkit/blob/master/README.md#output
+          outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true
+          platforms: 'linux/${{ matrix.platform.name }}'
           provenance: false
+          push: "${{ vars.PUBLISH_DOCKER_IMAGES == 'true' }}"
+          build-args: |
+            BUILDPLATFORM=linux/${{ matrix.platform.name }}
+
+      - name: Export digest
+        if: ${{ vars.PUBLISH_DOCKER_IMAGES == 'true' }}
+        run: |
+          mkdir -p ${{ runner.temp }}/digests
+          digest="${{ steps.build.outputs.digest }}"
+          echo "${{ matrix.platform.name }}" > "${{ runner.temp }}/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        if: ${{ vars.PUBLISH_DOCKER_IMAGES == 'true' }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: digests-${{ matrix.component.name }}-${{ matrix.platform.name }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: Merge digests and create manifest for multiplatform images
+    if: ${{ vars.PUBLISH_DOCKER_IMAGES == 'true' }}
+    needs:
+      - multiplatform_build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read    # Required to read repository contents for docker/metadata-action
+      packages: write   # Required to push Docker images to GitHub Container Registry (ghcr.io)
+    strategy:
+      fail-fast: false
+      matrix:
+        component:
+          - name: qubership-env-checker
+            context: .
+            description: Environments Checker Base image
+            file: Dockerfile
+    steps:
+      - name: Compute repository name
+        id: owner
+        run: |
+          OWNER="${{ github.repository_owner }}"
+          OWNER="${OWNER,,}"
+          OWNER=$(echo "$OWNER" | sed -E 's/[^a-z0-9._-]+/-/g')
+          echo "owner=$OWNER" >> $GITHUB_OUTPUT
+
+      - name: Set image name
+        run: |
+          OWNER="${{ github.repository_owner }}"
+          OWNER=$(echo "${OWNER,,}" | sed -E 's/[^a-z0-9._-]+/-/g')
+          echo "FULL_IMAGE_NAME=ghcr.io/${OWNER}/${{ matrix.component.name }}" >>${GITHUB_ENV}
+        env:
+          IMAGE_NAME: '${{ github.repository }}'
+
+      - name: Download digests
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-${{ matrix.component.name }}-*
+          merge-multiple: true
+
+      - name: Login to Docker Registry
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          password: ${{secrets.GITHUB_TOKEN}}
+          registry: ghcr.io
+          username: ${GITHUB_ACTOR}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
+        with:
+          images: "${{ env.FULL_IMAGE_NAME }}"
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=git-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+          flavor: |
+            latest=${{ github.ref == 'refs/heads/main' }}
+          labels: |
+            org.opencontainers.image.description=${{ matrix.component.description }}
+          annotations: |
+            org.opencontainers.image.description=${{ matrix.component.description }}
+
+      - name: Create manifest list for multiplatform images and push
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          # shellcheck disable=SC2046
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.FULL_IMAGE_NAME }}@sha256:%s ' *)
+
+      - name: Create additional platform tags for each digest image and push
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          for digest_file in *; do
+            digest=$(basename "$digest_file")
+            platform=$(cat "$digest_file")
+            for tag in $(jq -cr '.tags | map(. + "-'${platform}'") | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") ; do
+              docker buildx imagetools create "${{ env.FULL_IMAGE_NAME }}@sha256:$digest" --tag "${tag}"
+            done
+          done
+
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect "${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}"

@@ -44,7 +44,7 @@ The env-checker supports two operational modes:
 | Helm       | Mandatory   | 3.0+    |
 | Docker     | Optional    | 20.0+   |
 
-> **Note**: This service installs kubectl v1.32 internally. Ensure compatibility with your cluster version.
+> **Note**: This service installs last stable kubectl version internally. Ensure compatibility with your cluster version.
 
 ## Installation
 
