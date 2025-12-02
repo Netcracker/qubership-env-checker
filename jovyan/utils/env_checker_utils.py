@@ -143,7 +143,6 @@ def zip_reports_by_base_name(report_base_name) -> BytesIO:
 
 
 def get_report_names_by_base_name(report_base_name: str) -> list[str]:
-    global log_level
     out_files_list = []
     for filename in os.listdir('out'):
         out_files_list.append(filename)
