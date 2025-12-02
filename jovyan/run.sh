@@ -10,7 +10,7 @@ pdf_reporting_enabled=true
 html_reporting_enabled=false
 json_reporting_enabled=false
 clear_out=true
-print_usage(){
+print_usage() {
     echo -e "   \033[1mUsage:\033[0m bash run.sh [OPTIONS] [-PARAM_NAME=PARAM_VALUE] COMPOSITE_FILE_PATH|NOTEBOOK_FILE_PATH"
     echo -e "   \033[1mExecutes:\033[0m"
     echo -e "     - a single notebook with optional parameters"
@@ -56,8 +56,8 @@ prepareOutput() {
     fi
 
     if [ -d "/home/jovyan/out" ]; then
-        find /home/jovyan/out -type d -empty -delete          # delete all empty catalogs in './out' folder
-        find /home/jovyan/out -maxdepth 1 -type f -delete     # delete all files in './out' folder (except for non-empty subfolders)
+        find /home/jovyan/out -type d -empty -delete      # delete all empty catalogs in './out' folder
+        find /home/jovyan/out -maxdepth 1 -type f -delete # delete all files in './out' folder (except for non-empty subfolders)
         if [ -f /home/jovyan/shells/remove_out_catalogs.sh ]; then
             # shellcheck disable=SC1091
             # shellcheck source=/home/jovyan/shells/remove_out_catalogs.sh
@@ -65,14 +65,14 @@ prepareOutput() {
             source /home/jovyan/shells/remove_out_catalogs.sh
         fi
         if [[ -n $output_subfolder ]]; then
-            rm -rf "/home/jovyan/out/$output_subfolder"       # delete subfolder
+            rm -rf "/home/jovyan/out/$output_subfolder" # delete subfolder
         fi
     else
-        mkdir -p /home/jovyan/out                               # recreate out folder
+        mkdir -p /home/jovyan/out # recreate out folder
     fi
-    mkdir -p "/home/jovyan/out/$output_subfolder"             # create subfolder if '-o' flag was filled
+    mkdir -p "/home/jovyan/out/$output_subfolder" # create subfolder if '-o' flag was filled
     composite_result_file_path="/home/jovyan/out/$output_subfolder/result.yaml"
-    yq --null-input '{"checks": []}' > "$composite_result_file_path" # create result.yaml file with initial contents
+    yq --null-input '{"checks": []}' >"$composite_result_file_path" # create result.yaml file with initial contents
 }
 
 # $1 - name and full path to composite .yaml file
@@ -81,8 +81,7 @@ runComposite() {
     composite_file_content=$(yq -oy '... comments=""' "$1")
     checks_amount=$(echo "$composite_file_content" | yq -oy e '.checks | length')
 
-    for ((i=0;i<checks_amount;i++))
-    do
+    for ((i = 0; i < checks_amount; i++)); do
         notebook_path=$(calculate_composite_notebook_path)
         params="$(echo "$composite_file_content" | yq -oy e ".checks.[$i] | select(.params != null) | .params")"
         out="$(echo "$composite_file_content" | yq -oy e ".checks.[$i] | select(.out != null) | .out")"
@@ -103,33 +102,32 @@ extract_notebook_execution_metrics() {
     report_name=$(basename -- "$1" | sed -nr 's/([a-zA-Z0-9_]+)_[0-9]+\.ipynb/\1/p' | awk '{print tolower($0)}')
     # try to extract 'metrics' scrap from executed notebook
     metrics=$(python -c "import nb_data_manipulation_utils as m; print(m.extract_metrics_from_nb_scraps('$1'))" 2>/dev/null || echo '{}')
-    if [ "$metrics" != '{}' ] ; then
+    if [ "$metrics" != '{}' ]; then
         # if such scrap was extracted, validate its content with json schema
         metrics_validation_res=$(python -c "import json_schema_validation as v; print(v.validate_app_metrics_schema('$metrics'))" 2>/dev/null || echo 1)
-        if [[ (-n $metrics_validation_res) && ($metrics_validation_res -eq 0) ]] ; then
+        if [[ (-n $metrics_validation_res) && ($metrics_validation_res -eq 0) ]]; then
             #if scrap structure is valid, check optional fields (report_app, initiator, start_time, duration) and, if they don't present, set them
-            if [[ "$3" != "null" ]] ; then
+            if [[ "$3" != "null" ]]; then
                 # if 'initiator' was provided as shell parameter, use it to set 'initiator' field of all metrics
                 metrics=$(echo "$metrics" | initiator=$3 yq -oj '(.[].initiator)=env(initiator)')
             else
                 # else check if 'initiator' label is present in all metrics from notebook. If not, set default 'envchecker' value
                 initiator_specified=$(echo "$metrics" | yq -oj '. | all_c(has("initiator"))')
-                if [[ "$initiator_specified" == "false" ]] ; then
+                if [[ "$initiator_specified" == "false" ]]; then
                     metrics=$(echo "$metrics" | yq -oj '(.[].initiator)="envchecker"')
                 fi
             fi
 
             # if labels "report_app", "env", "scope" are not specified, set default value (null) for them
-            metrics=$(echo "$metrics" | yq -oj '(.[] | (select (. | has("report_app") | not)) .report_app) |= "null"' \
-                                    | yq -oj '(.[] | (select (. | has("env") | not)) .env) |= "null"'               \
-                                    | yq -oj '(.[] | (select (. | has("scope") | not)) .scope) |= "null"')
+            metrics=$(echo "$metrics" | yq -oj '(.[] | (select (. | has("report_app") | not)) .report_app) |= "null"' |
+                yq -oj '(.[] | (select (. | has("env") | not)) .env) |= "null"' |
+                yq -oj '(.[] | (select (. | has("scope") | not)) .scope) |= "null"')
 
             start_time_specified=$(echo "$metrics" | yq -oj '. | all_c(has("last_run"))')
-            if [[ "$start_time_specified" == "false" ]] ; then
+            if [[ "$start_time_specified" == "false" ]]; then
                 start_millis=$(date -d "$(yq '.metadata.papermill.start_time' "$1")" +'%s%3N')
                 metrics=$(echo "$metrics" | start_time=$start_millis yq -oj '(.[].last_run)=env(start_time)')
             fi
-
 
             nb_exec_duration=$(yq -oj '.metadata.papermill.duration' "$1" | awk '{print int( $1 * 1000 )}')
             metrics=$(echo "$metrics" | duration=$nb_exec_duration yq -oj '(.[] | (select (. | has("last_duration") | not)) .last_duration) |= env(duration)')
@@ -145,17 +143,17 @@ extract_notebook_execution_metrics() {
     # if such scrap is not present in executed notebook, then determine metrics by papermill metadata
     notebook_meta=$(yq -oj '.metadata.papermill' "$1")
     start_millis=$(date -d "$(echo "$notebook_meta" | yq '.start_time')" +'%s%3N')
-    duration=$(echo "$notebook_meta" | yq '.duration' | awk '{print int( $1 * 1000 )}';)
+    duration=$(echo "$notebook_meta" | yq '.duration' | awk '{print int( $1 * 1000 )}')
     initiator="envchecker"
-    if [[ (-n $3) && ("$3" != "envchecker") ]] ; then
+    if [[ (-n $3) && ("$3" != "envchecker") ]]; then
         initiator="$3"
     fi
     report_namespace="null"
-    if [[ (-n $4) && ("$4" != "null") ]] ; then
+    if [[ (-n $4) && ("$4" != "null") ]]; then
         report_namespace="$4"
     fi
     nb_start=$start_millis duration_millis=$duration status=$2 initiator=$initiator report_name=$report_name report_namespace=$report_namespace \
-    yq --null-input -oj '.last_run=env(nb_start) | .last_duration=env(duration_millis) | .status=env(status) | .report_namespace=strenv(report_namespace) | .report_app="null" | .initiator=strenv(initiator) | .s3_link="null" | .env="null" | .scope="null" | .report_name=strenv(report_name) | [.]'
+        yq --null-input -oj '.last_run=env(nb_start) | .last_duration=env(duration_millis) | .status=env(status) | .report_namespace=strenv(report_namespace) | .report_app="null" | .initiator=strenv(initiator) | .s3_link="null" | .env="null" | .scope="null" | .report_name=strenv(report_name) | [.]'
 }
 
 # $1 - executed notebook path
@@ -211,7 +209,7 @@ runSingleNotebook() {
         papermill "$script_path" -y "$params" -y "result_file_path: $out_script_name_without_ext" -y "out_path: $out_path" "$out_script_path"
     fi
 
-    res=$(python /home/jovyan/utils/parseOut.py < "$out_script_path")
+    res=$(python /home/jovyan/utils/parseOut.py <"$out_script_path")
     outs=("$out_script_path")
 
     if [[ -z $res ]]; then
@@ -248,7 +246,7 @@ runSingleNotebook() {
 }
 
 reportToPdf() {
-   if $pdf_reporting_enabled ; then
+    if $pdf_reporting_enabled; then
         if printf '%s\n' "${reports[@]}" | grep -Fqw 'pdf'; then
             echo "report to $1.pdf"
             jupyter nbconvert --to pdf "$out_path/$1"
@@ -256,14 +254,14 @@ reportToPdf() {
         else
             echo "report to pdf is disabled"
         fi
-  fi
+    fi
 }
 
 reportToHtml() {
     if printf '%s\n' "${reports[@]}" | grep -Fqw 'html'; then
         html_reporting_enabled=true
     fi
-    if $html_reporting_enabled ; then
+    if $html_reporting_enabled; then
         python /home/jovyan/utils/report_generator.py "$out_path"
     fi
 }
@@ -272,7 +270,7 @@ reportToJson() {
     if printf '%s\n' "${reports[@]}" | grep -Fqw 'json'; then
         json_reporting_enabled=true
     fi
-    if $json_reporting_enabled ; then
+    if $json_reporting_enabled; then
         /home/jovyan/utils/json_report_generator.py "$out_path"
     fi
 }
@@ -314,25 +312,25 @@ while getopts ":p:y:j:r:e:o:-:" opt; do
     case ${opt} in
     -)
         case "${OPTARG}" in
-                *)
-                # Handling other flags
-                params="${params}
+        *)
+            # Handling other flags
+            params="${params}
                 ${OPTARG/'='/': '}"
-                if [[ ${OPTARG} == "pdf=false" ]]; then
-                    pdf_reporting_enabled=false
-                fi
-                if [[ ${OPTARG} == "html=true" ]]; then
-                        html_reporting_enabled=true
-                fi
-                if [[ ${OPTARG} == "json=true" ]]; then
-                        json_reporting_enabled=true
-                fi
-                if [[ ${OPTARG} == "clear=false" ]]; then
-                        clear_out=false
-                fi
-                ;;
-            esac
+            if [[ ${OPTARG} == "pdf=false" ]]; then
+                pdf_reporting_enabled=false
+            fi
+            if [[ ${OPTARG} == "html=true" ]]; then
+                html_reporting_enabled=true
+            fi
+            if [[ ${OPTARG} == "json=true" ]]; then
+                json_reporting_enabled=true
+            fi
+            if [[ ${OPTARG} == "clear=false" ]]; then
+                clear_out=false
+            fi
             ;;
+        esac
+        ;;
     e)
         execute_pass=${OPTARG}
         execute_pass=${execute_pass//,/ } #replacement for env-checker-job for case when value for -e flag will be separated by ','
@@ -356,7 +354,7 @@ while getopts ":p:y:j:r:e:o:-:" opt; do
     r)
         DEFAULT_IFS=$IFS
         IFS=','
-        read -ra reports <<< "${OPTARG}"
+        read -ra reports <<<"${OPTARG}"
         IFS=$DEFAULT_IFS
         if [ ${#reports[@]} -gt 0 ]; then
             echo "${reports[@]}"
@@ -373,7 +371,7 @@ while getopts ":p:y:j:r:e:o:-:" opt; do
     esac
 done
 
-file_path=${*:$OPTIND:1}  #get value after all options (COMPOSITE_FILE_PATH|NOTEBOOK_FILE_PATH)
+file_path=${*:$OPTIND:1} #get value after all options (COMPOSITE_FILE_PATH|NOTEBOOK_FILE_PATH)
 
 #Concatenate subfolders to './out' if they were passed using the '-o' flag
 if [ -n "$output_subfolder" ]; then
@@ -384,15 +382,15 @@ fi
 
 if [[ -n $json_config ]]; then
     prepareOutput
-    echo "$json_config" > "$out_path/input.json"
+    echo "$json_config" >"$out_path/input.json"
     runComposite "$out_path/input.json"
 elif [[ -n $yaml_config ]]; then
     prepareOutput
-    echo "$yaml_config" > "$out_path/input.yaml"
+    echo "$yaml_config" >"$out_path/input.yaml"
     runComposite "$out_path/input.yaml"
 elif [[ -n $prepared_yaml ]]; then
     prepareOutput
-    echo "$prepared_yaml" > "$out_path/input.yaml"
+    echo "$prepared_yaml" >"$out_path/input.yaml"
     runComposite "$out_path/input.yaml"
 elif [[ $file_path == *.ipynb ]]; then
     prepareOutput
@@ -406,7 +404,7 @@ fi
 
 echo "overall_result: $overall_result"
 txt_result_file_path="$out_path/result.txt"
-echo "$overall_result" >> "$txt_result_file_path"
+echo "$overall_result" >>"$txt_result_file_path"
 
 reportToHtml
 reportToJson
