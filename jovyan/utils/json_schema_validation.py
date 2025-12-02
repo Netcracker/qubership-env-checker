@@ -12,7 +12,7 @@ APP_METRICS_SCHEMA = {
         "properties": {
             "initiator": {"type": "string"},
             "last_run": {
-                "$comment": "Amount of unix epoch milliseconds, indicating time when first (!) check in notebook was started. " + 
+                "$comment": "Amount of unix epoch milliseconds, indicating time when first (!) check in notebook was started. " +
                 "This time is supposed to be same (!) for all applications (namespaces), which are checked in notebook.",
                 "type": "number",
                 "minimum": 0,
@@ -34,7 +34,7 @@ APP_METRICS_SCHEMA = {
             "scope": {"type": "string"},
             "env": {"type": "string"}
         },
-        "required": ["report_namespace", "status"]    
+        "required": ["report_namespace", "status"]
     }
 }
 

@@ -15,3 +15,4 @@ for folder in "$out_dir"/*; do
     fi
   fi
 done
+

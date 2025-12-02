@@ -29,7 +29,7 @@ def get_env_variable_value_by_name(variable_name):
 def get_default_env_variable_value_by_name(variable_name):
     env_variable = None
     path_to_env = "/etc/cloud-passport-defaults/" + variable_name
-    if not os.path.isfile(path_to_env): 
+    if not os.path.isfile(path_to_env):
         #print(colorize_text.get_red_text_color(f"Could not get default environment value {variable_name}."))
         return None
     with open(path_to_env, 'r') as f:
@@ -224,8 +224,8 @@ def load_result_yml(dir: str):
             return
 
 def get_cloud_name() -> str:
-    """ 
-    Calculates cloud name from given cloud passport param CLOUD_PUBLIC_HOST    
+    """
+    Calculates cloud name from given cloud passport param CLOUD_PUBLIC_HOST
     """
     cloud_name = get_env_variable_value_by_name("CLOUD_PUBLIC_HOST")
 

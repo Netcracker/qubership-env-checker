@@ -26,3 +26,4 @@ elif [[ $params == "namespaces:"* ]]; then
 fi
 
 exit $overall_result
+

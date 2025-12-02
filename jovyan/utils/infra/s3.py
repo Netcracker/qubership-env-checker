@@ -67,7 +67,7 @@ def auth_call(host: str, user: str, token: str, region: str = "us-east-1") -> Re
         if response:
             return Result(ResultStatus.SUCCESS, "Successfully connected and listed buckets.")
         return Result(ResultStatus.FAIL, f"Bad response: {str(response)}", str(response), ErrorCode.ENVCH_1569.getErrorMessage())
-            
+
 
     except ClientError as client_err:
         fin_msg: str = ""
@@ -79,7 +79,7 @@ def auth_call(host: str, user: str, token: str, region: str = "us-east-1") -> Re
             errCode = ErrorCode.ENVCH_1569.getErrorMessage()
             fin_msg = "Error while connecting to S3"
         return Result(ResultStatus.FAIL, fin_msg, f"{client_err}\n{traceback.format_exc()}", errCode)
-    
+
     except Exception as e:
         return Result(ResultStatus.FAIL, str(e), traceback.format_exc(), ErrorCode.ENVCH_1569.getErrorMessage())
 
@@ -150,7 +150,7 @@ def uploadReportsByExecutedNotebookPath(executed_notebook_path: str) -> str:
     s3_upload_location = format_report_path_with_nb_exec_data(nb_exec_data)
     try:
         s3_client.upload_fileobj(zip, BUCKET_NAME, s3_upload_location)
-        url = REPORT_FULL_URL_TEMPLATE.format(s3_server_url = S3_URL, bucket_name = BUCKET_NAME, 
+        url = REPORT_FULL_URL_TEMPLATE.format(s3_server_url = S3_URL, bucket_name = BUCKET_NAME,
                                               bucket_to_report_path = s3_upload_location)
         print(f'{executed_notebook_path} reports are saved in S3: {url}')
     except ClientError as e:
@@ -167,9 +167,9 @@ def format_report_path_with_nb_exec_data(nb_exec_data: dict)  -> str:
     start_timestamp_seconds = int(nb_exec_data[constants.LAST_RUN] / 1000)
     scope = nb_exec_data[constants.SCOPE_LABEL]
     env = nb_exec_data[constants.ENV_LABEL]
-    return REPORT_PATH_TEMPLATE.format(report_name = nb_exec_data[constants.REPORT_NAME_LABEL], initiator = nb_exec_data[constants.INITIATOR_LABEL], 
-                                       date = convert_timestamp_to_date_str(start_timestamp_seconds), cloud_name = CLOUD_NAME, 
-                                       scope = scope + '_' if scope != 'null' else '', 
+    return REPORT_PATH_TEMPLATE.format(report_name = nb_exec_data[constants.REPORT_NAME_LABEL], initiator = nb_exec_data[constants.INITIATOR_LABEL],
+                                       date = convert_timestamp_to_date_str(start_timestamp_seconds), cloud_name = CLOUD_NAME,
+                                       scope = scope + '_' if scope != 'null' else '',
                                        env = env + '_' if env != 'null' else '',
                                        timestamp = start_timestamp_millis)
 
@@ -203,7 +203,7 @@ def prepare_lifecycle_config_with_rules(rules: list):
 
 def put_lifecycle_config_with_expiration_rule():
     s3_client.put_bucket_lifecycle_configuration(
-        Bucket=BUCKET_NAME, 
+        Bucket=BUCKET_NAME,
         LifecycleConfiguration=prepare_lifecycle_config_with_rules([EXPIRATION_RULE])
     )
 

@@ -2,7 +2,7 @@ import json
 import os
 
 class JsonReport:
-    
+
     def __init__(self):
         self.checks = []
         self.overall_result = "Passed"

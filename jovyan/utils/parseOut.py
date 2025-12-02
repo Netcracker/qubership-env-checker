@@ -13,3 +13,4 @@ try:
                 result=0
 except (RuntimeError, TypeError, NameError):
      print("Oops! Cannot get result tag from notebook")
+
