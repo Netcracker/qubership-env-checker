@@ -91,8 +91,8 @@ runComposite() {
 }
 
 calculate_composite_notebook_path() {
-	notebook_path="$(echo "$composite_file_content" | yq -oy e ".checks.[$i] | select(.path != null) | .path")"
-	echo "$notebook_path"
+    notebook_path="$(echo "$composite_file_content" | yq -oy e ".checks.[$i] | select(.path != null) | .path")"
+    echo "$notebook_path"
 }
 
 # $1 - executed notebook path
@@ -119,7 +119,7 @@ extract_notebook_execution_metrics() {
                 fi
             fi
 
-            # if labels "report_app", "env", "scopre" are not specified, set default value (null) for them
+            # if labels "report_app", "env", "scope" are not specified, set default value (null) for them
             metrics=$(echo "$metrics" | yq -oj '(.[] | (select (. | has("report_app") | not)) .report_app) |= "null"' \
                                     | yq -oj '(.[] | (select (. | has("env") | not)) .env) |= "null"'               \
                                     | yq -oj '(.[] | (select (. | has("scope") | not)) .scope) |= "null"')
@@ -172,9 +172,9 @@ runSingleNotebook() {
 
     script_path=$1
     if [[ ! -f $script_path ]]; then
-      printf "ERROR: file %s does not exist or invalid\n" "$script_path"
-      overall_result=1
-      return 1
+        printf "ERROR: file %s does not exist or invalid\n" "$script_path"
+        overall_result=1
+        return 1
     fi
 
     # check params
@@ -248,36 +248,33 @@ runSingleNotebook() {
 }
 
 reportToPdf() {
-   if $pdf_reporting_enabled ;
-      then
-      if printf '%s\n' "${reports[@]}" | grep -Fqw 'pdf'; then
-          echo "report to $1.pdf"
-          jupyter nbconvert --to pdf "$out_path/$1"
-          outs+=("$out_path/$1.pdf")
-      else
-          echo "report to pdf is disabled"
-      fi
+   if $pdf_reporting_enabled ; then
+        if printf '%s\n' "${reports[@]}" | grep -Fqw 'pdf'; then
+            echo "report to $1.pdf"
+            jupyter nbconvert --to pdf "$out_path/$1"
+            outs+=("$out_path/$1.pdf")
+        else
+            echo "report to pdf is disabled"
+        fi
   fi
 }
 
 reportToHtml() {
-   if printf '%s\n' "${reports[@]}" | grep -Fqw 'html'; then
-       html_reporting_enabled=true
-   fi
-   if $html_reporting_enabled ;
-   then
-       python /home/jovyan/utils/report_generator.py "$out_path"
-   fi
+    if printf '%s\n' "${reports[@]}" | grep -Fqw 'html'; then
+        html_reporting_enabled=true
+    fi
+    if $html_reporting_enabled ; then
+        python /home/jovyan/utils/report_generator.py "$out_path"
+    fi
 }
 
 reportToJson() {
-   if printf '%s\n' "${reports[@]}" | grep -Fqw 'json'; then
-       json_reporting_enabled=true
-   fi
-   if $json_reporting_enabled ;
-   then
-       /home/jovyan/utils/json_report_generator.py "$out_path"
-   fi
+    if printf '%s\n' "${reports[@]}" | grep -Fqw 'json'; then
+        json_reporting_enabled=true
+    fi
+    if $json_reporting_enabled ; then
+        /home/jovyan/utils/json_report_generator.py "$out_path"
+    fi
 }
 
 reportToMonitoring() {
@@ -380,9 +377,9 @@ file_path=${*:$OPTIND:1}  #get value after all options (COMPOSITE_FILE_PATH|NOTE
 
 #Concatenate subfolders to './out' if they were passed using the '-o' flag
 if [ -n "$output_subfolder" ]; then
-  out_path="/home/jovyan/out/$output_subfolder"
+    out_path="/home/jovyan/out/$output_subfolder"
 else
-  out_path="/home/jovyan/out"
+    out_path="/home/jovyan/out"
 fi
 
 if [[ -n $json_config ]]; then

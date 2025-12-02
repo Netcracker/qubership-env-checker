@@ -1,13 +1,17 @@
 import json
 import os
 
+
 class JsonReport:
 
     def __init__(self):
         self.checks = []
         self.overall_result = "Passed"
 
-    def add_check(self, name, status, description="", error_description="", time_exec=""):
+    def add_check(
+        self, name, status, description="", error_description="",
+        time_exec=""
+    ):
         check = {
             "name": name,
             "status": status,
@@ -19,7 +23,15 @@ class JsonReport:
         self.update_overall_result()
         return self.checks
 
-    def add_check_with_existing_json(self, existing_json, name, status, description="", error_description="", time_exec=""):
+    def add_check_with_existing_json(
+        self,
+        existing_json,
+        name,
+        status,
+        description="",
+        error_description="",
+        time_exec=""
+    ):
         if existing_json:
             self.checks = existing_json.get("checks", [])
             self.overall_result = existing_json.get("overall_result", "Passed")

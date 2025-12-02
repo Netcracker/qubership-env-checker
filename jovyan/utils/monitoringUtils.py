@@ -9,7 +9,6 @@ import constants
 
 from NotebookMetrics import NotebookMetrics
 from urllib.parse import urljoin
-from typing import Dict
 from opentelemetry import metrics as metricsLib
 from opentelemetry.exporter.prometheus_remote_write import (
     PrometheusRemoteWriteMetricsExporter,
@@ -18,9 +17,9 @@ from opentelemetry.sdk.metrics import MeterProvider, ObservableGauge
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 
-ENVHECKER_SOLUTION_CORRECTNESS_STATUS = 'envchecker_solution_correctness_status'
-ENVHECKER_SOLUTION_CORRECTNESS_LAST_RUN = 'envchecker_solution_correctness_last_run'
-ENVHECKER_SOLUTION_CORRECTNESS_LAST_DURATION = 'envchecker_solution_correctness_last_duration'
+ENVCHECKER_SOLUTION_CORRECTNESS_STATUS = 'envchecker_solution_correctness_status'
+ENVCHECKER_SOLUTION_CORRECTNESS_LAST_RUN = 'envchecker_solution_correctness_last_run'
+ENVCHECKER_SOLUTION_CORRECTNESS_LAST_DURATION = 'envchecker_solution_correctness_last_duration'
 
 
 class Metric:
@@ -48,7 +47,7 @@ class Metric:
 class MonitoringHelper:
     MONITORING_URL = env_checker_utils.get_env_variable_value_by_name('MONITORING_URL')
     if MONITORING_URL is None:
-        print(f'Cannot determine URL of monitoring system.')
+        print('Cannot determine URL of monitoring system.')
         sys.exit(1)
     MONITORING_USER = env_checker_utils.get_env_variable_value_by_name('MONITORING_USER')
     if MONITORING_USER is None:
@@ -57,7 +56,6 @@ class MonitoringHelper:
     if MONITORING_PASSWORD is None:
         MONITORING_PASSWORD = ''
     S3_URL = env_checker_utils.get_env_variable_value_by_name('STORAGE_SERVER_URL')
-
 
     exporter = PrometheusRemoteWriteMetricsExporter(
         endpoint=urljoin(MONITORING_URL, '/api/v1/write'),
@@ -82,34 +80,57 @@ class MonitoringHelper:
     @classmethod
     def registerGauges(cls):
         """
-        Registers (if not registered already) 3 ObservableGauge instruments for representing ENVHECKER_SOLUTION_CORRECTNESS_STATUS,
-        ENVHECKER_SOLUTION_CORRECTNESS_LAST_RUN, ENVHECKER_SOLUTION_CORRECTNESS_LAST_DURATION metrics.
+        Registers (if not registered already) 3 ObservableGauge instruments for representing
+          ENVCHECKER_SOLUTION_CORRECTNESS_STATUS,
+          ENVCHECKER_SOLUTION_CORRECTNESS_LAST_RUN,
+          ENVCHECKER_SOLUTION_CORRECTNESS_LAST_DURATION
+        metrics.
         Each ObservableGauge will be used then to create metrics in monitoring.
         """
 
-        if not cls.meter._is_instrument_registered(name=ENVHECKER_SOLUTION_CORRECTNESS_STATUS, type_=type(ObservableGauge), unit='', description='')[0]:
+        if not cls.meter._is_instrument_registered(
+            name=ENVCHECKER_SOLUTION_CORRECTNESS_STATUS,
+            type_=type(ObservableGauge),
+            unit='',
+            description=''
+        )[0]:
             def status_observable_gauge_func(options):
                 observations = []
                 for m in cls.status_metrics:
                     observations.append(metricsLib.Observation(m.get_value(), m.get_labels()))
                 return observations
-            cls.meter.create_observable_gauge(ENVHECKER_SOLUTION_CORRECTNESS_STATUS, [status_observable_gauge_func])
+            cls.meter.create_observable_gauge(ENVCHECKER_SOLUTION_CORRECTNESS_STATUS, [status_observable_gauge_func])
 
-        if not cls.meter._is_instrument_registered(name=ENVHECKER_SOLUTION_CORRECTNESS_LAST_RUN, type_=type(ObservableGauge), unit='', description='')[0]:
+        if not cls.meter._is_instrument_registered(
+            name=ENVCHECKER_SOLUTION_CORRECTNESS_LAST_RUN,
+            type_=type(ObservableGauge),
+            unit='',
+            description=''
+        )[0]:
             def last_run_observable_gauge_func(options):
                 observations = []
                 for m in cls.last_run_metrics:
                     observations.append(metricsLib.Observation(m.get_value(), m.get_labels()))
                 return observations
-            cls.meter.create_observable_gauge(ENVHECKER_SOLUTION_CORRECTNESS_LAST_RUN, [last_run_observable_gauge_func])
+            cls.meter.create_observable_gauge(
+                ENVCHECKER_SOLUTION_CORRECTNESS_LAST_RUN,
+                [last_run_observable_gauge_func])
 
-        if not cls.meter._is_instrument_registered(name=ENVHECKER_SOLUTION_CORRECTNESS_LAST_DURATION, type_=type(ObservableGauge), unit='', description='')[0]:
+        if not cls.meter._is_instrument_registered(
+            name=ENVCHECKER_SOLUTION_CORRECTNESS_LAST_DURATION,
+            type_=type(ObservableGauge),
+            unit='',
+            description=''
+        )[0]:
             def last_duration_observable_gauge_func(options):
                 observations = []
                 for m in cls.last_duration_metrics:
                     observations.append(metricsLib.Observation(m.get_value(), m.get_labels()))
                 return observations
-            cls.meter.create_observable_gauge(ENVHECKER_SOLUTION_CORRECTNESS_LAST_DURATION, [last_duration_observable_gauge_func])
+            cls.meter.create_observable_gauge(
+                ENVCHECKER_SOLUTION_CORRECTNESS_LAST_DURATION,
+                [last_duration_observable_gauge_func]
+            )
 
     @classmethod
     def flush(cls):
@@ -126,7 +147,9 @@ class MonitoringHelper:
         WARNING: must be used only by run.sh
         """
 
-        notebook_execution_data_list = nb_data_manipulation_utils.extract_notebook_execution_data_from_result_file(executed_notebook_path)
+        notebook_execution_data_list = nb_data_manipulation_utils.extract_notebook_execution_data_from_result_file(
+            executed_notebook_path
+        )
         cls.pushToMonitoring(notebook_execution_data_list)
 
     @classmethod
@@ -149,9 +172,15 @@ class MonitoringHelper:
                 constants.SCOPE_LABEL: notebook_metric.get_scope()
             }
 
-            cls.status_metrics.append(Metric(ENVHECKER_SOLUTION_CORRECTNESS_STATUS, status, labels))
-            cls.last_run_metrics.append(Metric(ENVHECKER_SOLUTION_CORRECTNESS_LAST_RUN, last_run, labels))
-            cls.last_duration_metrics.append(Metric(ENVHECKER_SOLUTION_CORRECTNESS_LAST_DURATION, last_duration, labels))
+            cls.status_metrics.append(Metric(ENVCHECKER_SOLUTION_CORRECTNESS_STATUS, status, labels))
+            cls.last_run_metrics.append(Metric(ENVCHECKER_SOLUTION_CORRECTNESS_LAST_RUN, last_run, labels))
+            cls.last_duration_metrics.append(
+                Metric(
+                    ENVCHECKER_SOLUTION_CORRECTNESS_LAST_DURATION,
+                    last_duration,
+                    labels
+                )
+            )
 
         cls.registerGauges()
         cls.flush()

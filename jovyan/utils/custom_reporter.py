@@ -50,9 +50,9 @@ class Report:
 
     def getExceptionStatus(self):
         return self.isExceptionOccured
+
     def setExceptionStatus(self):
         self.isExceptionOccured = True
 
     def __iter__(self):
         return iter(self.value_list.values())
-

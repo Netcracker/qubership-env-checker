@@ -10,7 +10,6 @@ try:
             tags = metadata['tags']
             if 'result' in tags:
                 print(cell['outputs'][0]['data']['text/plain'][0])
-                result=0
+                result = 0
 except (RuntimeError, TypeError, NameError):
-     print("Oops! Cannot get result tag from notebook")
-
+    print("Oops! Cannot get result tag from notebook")
