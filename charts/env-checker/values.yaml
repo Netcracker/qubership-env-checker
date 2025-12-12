@@ -51,3 +51,25 @@ STORAGE_PROVIDER: ''
 STORAGE_USERNAME: ''
 STORAGE_PASSWORD: ''
 STORAGE_REGION: ''
+
+# Git username, token and domain for legacy git_helper.sh.
+ENVCHECKER_GIT_USERNAME: ''
+ENVCHECKER_GIT_TOKEN: ''
+# If empty, will be extracted from repositoryUrl.
+ENVCHECKER_GIT_DOMAIN: ''
+
+git:
+  # Username for accessing a private GIT repository. Used for authentication.
+  username: ''
+  # Personal Access Token for a private GIT repository. Used for authentication.
+  token: ''
+  # URL of the GIT repository to fetch files/notebooks from.
+  repositoryUrl: ''
+  # Path in the container where fetched files/notebooks will be placed.
+  targetPath: ''
+  # Path or pattern for sparse checkout — which files/folders to fetch from the repository.
+  sparsePath: ''
+  # Branch of the GIT repository to fetch files from.
+  branch: 'main'
+  # Subfolder inside targetPath where fetched files will be moved (optional).
+  subfolder: ''

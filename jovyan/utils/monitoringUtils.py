@@ -1,6 +1,6 @@
 import sys
-sys.path
-sys.path.append("/home/jovyan/utils")
+sys.path  # noqa: E402
+sys.path.append("/home/jovyan/utils")  # noqa: E402
 import math
 import urllib3
 import env_checker_utils

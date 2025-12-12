@@ -25,6 +25,60 @@
       name: cloud-passport-envs
       key: CLOUD_PUBLIC_HOST
 {{- end }}
+
+{{- define "envchecker.git.env" }}
+- name: "GIT_USERNAME"
+  valueFrom:
+    secretKeyRef:
+      name: env-checker-git-secret
+      key: GIT_USERNAME
+- name: "GIT_TOKEN"
+  valueFrom:
+    secretKeyRef:
+      name: env-checker-git-secret
+      key: GIT_TOKEN
+- name: "GIT_REPOSITORY_URL"
+  valueFrom:
+    secretKeyRef:
+      name: env-checker-git-secret
+      key: GIT_REPOSITORY_URL
+- name: "GIT_TARGET_PATH"
+  valueFrom:
+    secretKeyRef:
+      name: env-checker-git-secret
+      key: GIT_TARGET_PATH
+- name: "GIT_SPARSE_PATH"
+  valueFrom:
+    secretKeyRef:
+      name: env-checker-git-secret
+      key: GIT_SPARSE_PATH
+- name: "GIT_BRANCH"
+  valueFrom:
+    secretKeyRef:
+      name: env-checker-git-secret
+      key: GIT_BRANCH
+- name: "GIT_SUBFOLDER"
+  valueFrom:
+    secretKeyRef:
+      name: env-checker-git-secret
+      key: GIT_SUBFOLDER
+# Legacy variables for backward compatibility with old git_helper.sh
+- name: "ENVCHECKER_GIT_USERNAME"
+  valueFrom:
+    secretKeyRef:
+      name: env-checker-git-secret
+      key: ENVCHECKER_GIT_USERNAME
+- name: "ENVCHECKER_GIT_TOKEN"
+  valueFrom:
+    secretKeyRef:
+      name: env-checker-git-secret
+      key: ENVCHECKER_GIT_TOKEN
+- name: "ENVCHECKER_GIT_DOMAIN"
+  valueFrom:
+    secretKeyRef:
+      name: env-checker-git-secret
+      key: ENVCHECKER_GIT_DOMAIN
+{{- end }}
 {{- define "envchecker.pod.volumeMounts" }}
 - name: application-config
   mountPath: "/etc/config/application.properties"

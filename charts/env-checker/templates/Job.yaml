@@ -29,6 +29,7 @@ spec:
             - name: "ENVIRONMENT_CHECKER_JOB_COMMAND"
               value: '{{ .Values.ENVIRONMENT_CHECKER_JOB_COMMAND }}'
             {{- include "envchecker.pod.env" . | nindent 12 }}
+            {{- include "envchecker.git.env" . | nindent 12 }}
           volumeMounts:
             {{- include "envchecker.pod.volumeMounts" . | nindent 12 }}
           resources:

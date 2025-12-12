@@ -298,6 +298,7 @@ RUN mamba install --yes \
     'boto3' \
     'bottleneck' \
     'jupyter_server>=2.0.0' \
+    'jupyterlab-git' \
     'opentelemetry-api' \
     'opentelemetry-sdk' \
     'opentelemetry-semantic-conventions' \

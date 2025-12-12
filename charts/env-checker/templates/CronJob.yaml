@@ -35,6 +35,7 @@ spec:
                 - name: "ENVIRONMENT_CHECKER_CRON_JOB_COMMAND"
                   value: '{{ .Values.ENVIRONMENT_CHECKER_CRON_JOB_COMMAND }}'
                 {{- include "envchecker.pod.env" . | nindent 16 }}
+                {{- include "envchecker.git.env" . | nindent 16 }}
               volumeMounts:
                 {{- include "envchecker.pod.volumeMounts" . | nindent 16 }}
               resources:
