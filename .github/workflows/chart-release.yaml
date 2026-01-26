@@ -1,0 +1,214 @@
+---
+
+# This workflow is used to release Helm charts and Docker images.
+# It has a dry run stage to check the build process without actually publishing the artifacts.
+# The workflow is triggered manually and allows the user to specify the release version.
+# The workflow also creates a GitHub release after the deployment stage if the deployment is successful.
+# The workflow uses the `netcracker/qubership-workflow-hub/actions/charts-values-update-action` action to perform the release steps.
+# The workflow requires the following inputs:
+# - `release`: The release version to publish.
+# The workflow requires several configuration files:
+# - configuration file used for the release process: `.github/helm-charts-release-config.yaml`
+#   Example: config/examples/helm-charts-release-config.yaml
+# - Docker build configuration file: `.github/docker-build-config.json`
+#   Example: config/examples/docker-build-config.json
+# - Assets configuration file: `.github/assets-config.yml`
+#   Example: config/examples/assets-config.yml
+# - GitHub release drafter configuration file: `.github/release-drafter-config.yml`
+#   Example: config/examples/release-drafter-config.yml
+
+name: "Helm Charts Release"
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'Release version vithout "v" prefix'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+run-name: ${{ github.repository }} Release ${{ github.event.inputs.release }}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CHART_CONFIG_FILE: '.qubership/helm-charts-release-config.yaml'
+  DOCKER_CONFIG_FILE: '.qubership/docker.cfg'
+jobs:
+  check-tag:
+    name: "Check if tag exists"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Check if tag exists"
+        id: check_tag
+        uses: netcracker/qubership-workflow-hub/actions/tag-action@d53e0ff4ca97bd496974febd9aee460d1c5e9ba9 #v2.0.8
+        with:
+          tag-name: '${{ inputs.release }}'
+          ref: ${{ github.ref }}
+          create-tag: false
+          check-tag: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  load-docker-build-components:
+    name: "Load Docker Build Components Configuration"
+    runs-on: ubuntu-latest
+    permissions:
+      packages: read
+    outputs:
+      packages: ${{ steps.config.outputs.config }}
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Get Configuration File
+        uses: netcracker/qubership-workflow-hub/actions/docker-config-resolver@d53e0ff4ca97bd496974febd9aee460d1c5e9ba9 #v2.0.8
+        id: config
+        with:
+          file-path: "${{ env.DOCKER_CONFIG_FILE }}"
+
+  docker-check-build:
+    name: "Docker Dry Run Build"
+    needs: [load-docker-build-components, check-tag]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        component: ${{ fromJson(needs.load-docker-build-components.outputs.packages) }}
+    steps:
+      - name: "Get version for current component"
+        id: get-version
+        run: |
+          echo "IMAGE=${{ matrix.component.name }}" >> $GITHUB_ENV
+      - name: "Docker dry run build"
+        uses: netcracker/qubership-workflow-hub/actions/docker-action@d53e0ff4ca97bd496974febd9aee460d1c5e9ba9 #v2.0.8
+        with:
+          ref: ${{ github.ref }}
+          download-artifact: false
+          dry-run: true
+          component: ${{ toJson(matrix.component) }}
+          platforms: ${{ matrix.component.platforms }}
+          tags: "dry-run-${{ inputs.release }}"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  chart-release:
+    name: "Helm Charts Release"
+    permissions:
+      contents: write
+      packages: write
+    needs: [check-tag, load-docker-build-components, docker-check-build]
+    runs-on: ubuntu-latest
+    outputs:
+      images-versions: ${{ steps.update-versions.outputs.images-versions }}
+      charts-artifact: ${{ steps.update-versions.outputs.released-chart-atrifact }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: "Add github.vars into github.env"
+        env:
+          VARS_JSON: '${{ toJson(vars) }}'
+        run: |
+          echo "${VARS_JSON}" | jq -r 'to_entries|map("\(.key)=\(.value)")|.[]' >> $GITHUB_ENV
+
+      - name: "Chart release"
+        id: update-versions
+        uses: netcracker/qubership-workflow-hub/actions/charts-values-update-action@d53e0ff4ca97bd496974febd9aee460d1c5e9ba9 #v2.0.8
+        with:
+          release-version: ${{ inputs.release }}
+          config-file: ${{ env.CHART_CONFIG_FILE }}
+          default-tag: ${{ inputs.release }}
+          package-charts: true
+          publish-charts: true
+
+      - name: "Debug"
+        env:
+          IMAGES_VERSIONS: "${{ steps.update-versions.outputs.images-versions }}"
+        run: |
+          echo "Images versions: ${IMAGES_VERSIONS}"
+          ls -laR
+
+  docker-build:
+    name: "Docker Build and Publish"
+    needs: [chart-release, load-docker-build-components]
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        component: ${{ fromJson(needs.load-docker-build-components.outputs.packages) }}
+    steps:
+      - name: "Get version for current component"
+        id: get-version
+        run: |
+          echo "IMAGE_VERSION=${{ fromJson(needs.chart-release.outputs.images-versions)[matrix.component.name] || inputs.release }}" >> $GITHUB_ENV
+
+      - name: "Generate tags list"
+        id: generate-tags
+        uses: netcracker/qubership-workflow-hub/actions/metadata-action@d53e0ff4ca97bd496974febd9aee460d1c5e9ba9 #v2.0.8
+        with:
+          ref: ${{ inputs.release }}
+          default-template: "{{major}}.{{minor}}.{{patch}},{{major}}.{{minor}},{{major}}"
+          extra-tags: ''
+          replace-symbol: '_'
+
+      - name: "Docker build and publish"
+        uses: netcracker/qubership-workflow-hub/actions/docker-action@d53e0ff4ca97bd496974febd9aee460d1c5e9ba9 #v2.0.8
+        with:
+          ref: release-${{ inputs.release }}
+          download-artifact: false
+          dry-run: false
+          component: ${{ toJson(matrix.component) }}
+          platforms: ${{ matrix.component.platforms }}
+          tags: "${{ steps.generate-tags.outputs.result }},latest"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  github-release:
+    permissions:
+      contents: write
+      packages: write
+    needs: [chart-release, docker-build]
+    continue-on-error: false
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+        with:
+          fetch-depth: 0
+          ref: release-${{ inputs.release }}
+          persist-credentials: true
+
+      - name: "Release-drafter"
+        uses: netcracker/release-drafter@86f4276a3894b5af70480e826c32fe3648ac6a70  # v1.0.0
+        with:
+          config-name: release-drafter-config.yml
+          publish: true
+          name: v${{ inputs.release }}
+          tag: v${{ inputs.release }}
+          version: ${{ inputs.release }}
+          commitish: release-${{ inputs.release }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "Download released charts"
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131  # v7.0.0
+        with:
+          artifact-ids: ${{ needs.chart-release.outputs.charts-artifact }}
+      - name: "Upload Assets"
+        uses: netcracker/qubership-workflow-hub/actions/assets-action@d53e0ff4ca97bd496974febd9aee460d1c5e9ba9 #v2.0.8
+        with:
+          tag: ${{ inputs.release }}
+          item-path: "./*.tgz"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
