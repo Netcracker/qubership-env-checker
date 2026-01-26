@@ -22,7 +22,7 @@ on:
   workflow_dispatch:
     inputs:
       release:
-        description: 'Release version vithout "v" prefix'
+        description: 'Release version without "v" prefix'
         required: true
         type: string
 
