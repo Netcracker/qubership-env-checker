@@ -1,0 +1,8 @@
+---
+
+charts:
+  - name: env-checker-chart
+    chart_file: charts/env-checker/Chart.yaml
+    values_file: charts/env-checker/templates/_helpers.tpl
+    image:
+      - ghcr.io/netcracker/qubership-env-checker:${release}
