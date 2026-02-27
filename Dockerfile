@@ -212,7 +212,7 @@ RUN mamba install --yes \
         'jupyter-lsp=2.2.6' \
         #'jupyterhub=5.3.0' \
         'jupyterlab=4.4.5' \
-        'nodejs=24.14.0' \
+        'nodejs>=25.6.1' \
     && \
     jupyter notebook --generate-config && \
     mamba clean --all -f -y && \
