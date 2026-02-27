@@ -11,8 +11,6 @@
     secretKeyRef:
       name: env-checker-ui-access-token
       key: access-token
-- name: "PRODUCTION_MODE"
-  value: '{{ .Values.PRODUCTION_MODE }}'
 - name: "ENVIRONMENT_CHECKER_STORAGE_BUCKET_EXPIRATION_DAYS"
   value: '{{ .Values.ENVIRONMENT_CHECKER_STORAGE_BUCKET_EXPIRATION_DAYS }}'
 - name: "ENVIRONMENT_CHECKER_LOG_LEVEL"
