@@ -1,9 +1,38 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:best-practices"
+    "config:best-practices",
+    ":enablePreCommit"
   ],
   "labels": [
     "dependencies"
+  ],
+  "automerge": true,
+  "platformAutomerge": false,
+  "schedule": [
+    "every 1 weeks on Monday"
+  ],
+  "dockerfile": {
+    "enabled": true
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "CORE version ARGs in Dockerfile",
+      "managerFilePatterns": ["Dockerfile"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\s*\\nARG (?<depNameEnv>[A-Z0-9_]+)=(?<currentValue>[^\\s#]+)"
+      ]
+    }
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions"
+    },
+    {
+      "matchManagers": ["dockerfile"],
+      "groupName": "dockerfile"
+    }
   ]
 }
