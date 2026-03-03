@@ -1,5 +1,7 @@
 ARG BUILDPLATFORM
 
+FROM --platform=$BUILDPLATFORM debian:trixie-slim@sha256:1d3c811171a08a5adaa4a163fbafd96b61b87aa871bbc7aa15431ac275d3d430
+
 # CORE versions (managed by Renovate)
 # renovate: datasource=conda depName=python
 ARG PYTHON_VERSION=3.10
@@ -11,8 +13,6 @@ ARG KUBECTL_VERSION=v1.35.2
 ARG YQ_VERSION=v4.50.1
 # renovate: datasource=conda depName=nodejs
 ARG NODEJS_VERSION=25.6.1
-
-FROM --platform=$BUILDPLATFORM debian:trixie-slim@sha256:1d3c811171a08a5adaa4a163fbafd96b61b87aa871bbc7aa15431ac275d3d430
 
 ARG NB_USER="jovyan"
 ARG NB_UID="1000"
