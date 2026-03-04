@@ -36,7 +36,7 @@
       "groupName": "dockerfile"
     },
     {
-      "matchManagers": ["regex"],
+      "matchManagers": ["custom.regex"],
       "matchDatasources": ["conda"],
       "registryUrls": [
         "https://api.anaconda.org/package/conda-forge/",
