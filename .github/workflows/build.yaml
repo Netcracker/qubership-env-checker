@@ -1,17 +1,7 @@
 # Set repository variable PUBLISH_DOCKER_IMAGES to `true`, if you want to publish docker images to ghcr.io
-name: Build Artifacts
+name: Build Artifacts (legacy, disabled triggers)
 
 on:
-  release:
-    types: [created]
-  push:
-    branches:
-      - '**'
-    paths:
-      - '**'
-      - '!.github/**'
-      - '.github/workflows/build.yaml'
-      - '!docs/**'
   workflow_dispatch: {}
 
 permissions:
