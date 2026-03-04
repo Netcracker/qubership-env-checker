@@ -29,8 +29,10 @@ on:
     branches:
     - '**'
     paths-ignore:
-    - '.github/**'
-    - 'docs/**'
+    - '**'
+    - '!.github/**'
+    - '.github/workflows/dev-docker-build.yaml'
+    - '!docs/**'
     - 'CODE-OF-CONDUCT.md'
     - 'CONTRIBUTING.md'
     - 'LICENSE'
