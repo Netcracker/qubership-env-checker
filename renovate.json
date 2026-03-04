@@ -22,7 +22,8 @@
       "managerFilePatterns": ["Dockerfile"],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\s*\\nARG (?<depNameEnv>[A-Z0-9_]+)=(?<currentValue>[^\\s#]+)"
-      ]
+      ],
+      "versioningTemplate": "semver"
     }
   ],
   "packageRules": [
@@ -33,6 +34,14 @@
     {
       "matchManagers": ["dockerfile"],
       "groupName": "dockerfile"
+    },
+    {
+      "matchManagers": ["regex"],
+      "matchDatasources": ["conda"],
+      "registryUrls": [
+        "https://api.anaconda.org/package/conda-forge/",
+        "https://prefix.dev/conda-forge/"
+      ]
     }
   ]
 }
