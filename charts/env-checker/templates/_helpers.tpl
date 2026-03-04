@@ -8,6 +8,6 @@ Image can be found from:
   {{- if and (not (empty .Values.IMAGE_REPOSITORY)) (not (empty .Values.TAG)) -}}
     {{- printf "%s:%s" .Values.IMAGE_REPOSITORY .Values.TAG -}}
   {{- else -}}
-    {{- printf "ghcr.io/netcracker/qubership-env-checker:main" -}}
+    {{- printf "ghcr.io/netcracker/qubership-env-checker:1.0.4" -}}
   {{- end -}}
 {{- end -}}
