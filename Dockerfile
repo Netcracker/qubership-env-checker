@@ -1,5 +1,18 @@
 ARG BUILDPLATFORM
+
 FROM --platform=$BUILDPLATFORM debian:trixie-slim@sha256:1d3c811171a08a5adaa4a163fbafd96b61b87aa871bbc7aa15431ac275d3d430
+
+# CORE versions (managed by Renovate)
+# renovate: datasource=conda depName=python
+ARG PYTHON_VERSION=3.10.0
+# renovate: datasource=github-releases depName=mamba-org/micromamba-releases
+ARG MICROMAMBA_VERSION=2.0.4-0
+# renovate: datasource=github-releases depName=kubernetes/kubernetes
+ARG KUBECTL_VERSION=v1.35.2
+# renovate: datasource=github-releases depName=mikefarah/yq
+ARG YQ_VERSION=v4.50.1
+# renovate: datasource=conda depName=nodejs
+ARG NODEJS_VERSION=25.6.1
 
 ARG NB_USER="jovyan"
 ARG NB_UID="1000"
@@ -61,9 +74,6 @@ RUN echo "auth requisite pam_deny.so" >> /etc/pam.d/su && \
     fix-permissions "${HOME}" && \
     fix-permissions "${CONDA_DIR}"
 
-# Pin python version here, or set it to "default"
-ARG PYTHON_VERSION=3.10
-
 # Setup work directory for backward-compatibility
 RUN mkdir "/home/${NB_USER}/work" && fix-permissions "/home/${NB_USER}"
 
@@ -92,7 +102,7 @@ RUN set -x && \
         echo "Unsupported architecture: ${arch}"; exit 1; \
     fi && \
     # Download micromamba.tar.bz2
-    if ! wget -qO /tmp/micromamba.tar.bz2 https://github.com/mamba-org/micromamba-releases/releases/download/2.0.4-0/micromamba-${MAMBA_ARCH}.tar.bz2; then \
+    if ! wget -qO /tmp/micromamba.tar.bz2 https://github.com/mamba-org/micromamba-releases/releases/download/${MICROMAMBA_VERSION}/micromamba-${MAMBA_ARCH}.tar.bz2; then \
         echo "Failed to download micromamba.tar.bz2"; \
         exit 1; \
     fi && \
@@ -212,7 +222,7 @@ RUN mamba install --yes \
         'jupyter-lsp=2.2.6' \
         #'jupyterhub=5.3.0' \
         'jupyterlab=4.4.5' \
-        'nodejs>=25.6.1' \
+        "nodejs>=${NODEJS_VERSION}" \
     && \
     jupyter notebook --generate-config && \
     mamba clean --all -f -y && \
@@ -243,7 +253,7 @@ RUN sed -re "s/c.ServerApp/c.NotebookApp/g" \
 
 WORKDIR "${HOME}"
 
-# Autodiscovery the latest version of kubectl, downloads and install it
+# Autodiscovery kubectl arch and download static version
 RUN set -x && \
     arch=$(uname -m) && \
     if [ "${arch}" = "x86_64" ]; then \
@@ -253,7 +263,6 @@ RUN set -x && \
     else \
         echo "Unsupported architecture: ${arch}"; exit 1; \
     fi && \
-    KUBECTL_VERSION="$(curl -Ls https://dl.k8s.io/release/latest.txt)"; \
     wget --progress=dot:giga -O /usr/local/bin/kubectl-${KUBECTL_VERSION} https://dl.k8s.io/${KUBECTL_VERSION}/bin/linux/${KUBE_ARCH}/kubectl && \
     chmod +x /usr/local/bin/kubectl-${KUBECTL_VERSION} && \
     ln -sf /usr/local/bin/kubectl-${KUBECTL_VERSION} /usr/local/bin/kubectl
@@ -268,7 +277,7 @@ RUN set -x && \
     else \
         echo "Unsupported architecture: ${arch}"; exit 1; \
     fi && \
-    wget --progress=dot:giga https://github.com/mikefarah/yq/releases/download/v4.50.1/yq_linux_${YQ_ARCH}.tar.gz && \
+    wget --progress=dot:giga https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${YQ_ARCH}.tar.gz && \
     tar -xzvf yq_linux_${YQ_ARCH}.tar.gz -C /usr/bin/ && \
     mv /usr/bin/yq_linux_${YQ_ARCH} /usr/bin/yq && \
     chmod +x /usr/bin/yq && \
