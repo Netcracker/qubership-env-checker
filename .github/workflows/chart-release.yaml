@@ -43,7 +43,7 @@ jobs:
     steps:
       - name: "Check if tag exists"
         id: check_tag
-        uses: netcracker/qubership-workflow-hub/actions/tag-action@d53e0ff4ca97bd496974febd9aee460d1c5e9ba9 #v2.0.8
+        uses: netcracker/qubership-workflow-hub/actions/tag-action@5edd67e98d2f0eec5ab77b4deca0e1d481137462 # v2.1.1
         with:
           tag-name: '${{ inputs.release }}'
           ref: ${{ github.ref }}
@@ -61,12 +61,12 @@ jobs:
       packages: ${{ steps.config.outputs.config }}
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
       - name: Get Configuration File
-        uses: netcracker/qubership-workflow-hub/actions/docker-config-resolver@d53e0ff4ca97bd496974febd9aee460d1c5e9ba9 #v2.0.8
+        uses: netcracker/qubership-workflow-hub/actions/docker-config-resolver@5edd67e98d2f0eec5ab77b4deca0e1d481137462 # v2.1.1
         id: config
         with:
           file-path: "${{ env.DOCKER_CONFIG_FILE }}"
@@ -85,7 +85,7 @@ jobs:
         run: |
           echo "IMAGE=${{ matrix.component.name }}" >> $GITHUB_ENV
       - name: "Docker dry run build"
-        uses: netcracker/qubership-workflow-hub/actions/docker-action@d53e0ff4ca97bd496974febd9aee460d1c5e9ba9 #v2.0.8
+        uses: netcracker/qubership-workflow-hub/actions/docker-action@5edd67e98d2f0eec5ab77b4deca0e1d481137462 # v2.1.1
         with:
           ref: ${{ github.ref }}
           download-artifact: false
@@ -108,7 +108,7 @@ jobs:
       charts-artifact: ${{ steps.update-versions.outputs.released-chart-atrifact }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           fetch-depth: 0
           persist-credentials: true
@@ -121,7 +121,7 @@ jobs:
 
       - name: "Chart release"
         id: update-versions
-        uses: netcracker/qubership-workflow-hub/actions/charts-values-update-action@d53e0ff4ca97bd496974febd9aee460d1c5e9ba9 #v2.0.8
+        uses: netcracker/qubership-workflow-hub/actions/charts-values-update-action@5edd67e98d2f0eec5ab77b4deca0e1d481137462 # v2.1.1
         with:
           release-version: ${{ inputs.release }}
           config-file: ${{ env.CHART_CONFIG_FILE }}
@@ -155,7 +155,7 @@ jobs:
 
       - name: "Generate tags list"
         id: generate-tags
-        uses: netcracker/qubership-workflow-hub/actions/metadata-action@d53e0ff4ca97bd496974febd9aee460d1c5e9ba9 #v2.0.8
+        uses: netcracker/qubership-workflow-hub/actions/metadata-action@5edd67e98d2f0eec5ab77b4deca0e1d481137462 # v2.1.1
         with:
           ref: ${{ inputs.release }}
           default-template: "{{major}}.{{minor}}.{{patch}},{{major}}.{{minor}},{{major}}"
@@ -163,7 +163,7 @@ jobs:
           replace-symbol: '_'
 
       - name: "Docker build and publish"
-        uses: netcracker/qubership-workflow-hub/actions/docker-action@d53e0ff4ca97bd496974febd9aee460d1c5e9ba9 #v2.0.8
+        uses: netcracker/qubership-workflow-hub/actions/docker-action@5edd67e98d2f0eec5ab77b4deca0e1d481137462 # v2.1.1
         with:
           ref: release-${{ inputs.release }}
           download-artifact: false
@@ -183,7 +183,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           fetch-depth: 0
           ref: release-${{ inputs.release }}
@@ -206,7 +206,7 @@ jobs:
         with:
           artifact-ids: ${{ needs.chart-release.outputs.charts-artifact }}
       - name: "Upload Assets"
-        uses: netcracker/qubership-workflow-hub/actions/assets-action@d53e0ff4ca97bd496974febd9aee460d1c5e9ba9 #v2.0.8
+        uses: netcracker/qubership-workflow-hub/actions/assets-action@5edd67e98d2f0eec5ab77b4deca0e1d481137462 # v2.1.1
         with:
           tag: ${{ inputs.release }}
           item-path: "./*.tgz"
