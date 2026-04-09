@@ -43,7 +43,7 @@ jobs:
     steps:
       - name: "Check if tag exists"
         id: check_tag
-        uses: netcracker/qubership-workflow-hub/actions/tag-action@d53e0ff4ca97bd496974febd9aee460d1c5e9ba9 #v2.0.8
+        uses: netcracker/qubership-workflow-hub/actions/tag-action@d11baa8a4b42d1a931808c0766ee23eb344c47dd #v2.2.0
         with:
           tag-name: '${{ inputs.release }}'
           ref: ${{ github.ref }}
@@ -66,7 +66,7 @@ jobs:
           persist-credentials: false
 
       - name: Get Configuration File
-        uses: netcracker/qubership-workflow-hub/actions/docker-config-resolver@d53e0ff4ca97bd496974febd9aee460d1c5e9ba9 #v2.0.8
+        uses: netcracker/qubership-workflow-hub/actions/docker-config-resolver@d11baa8a4b42d1a931808c0766ee23eb344c47dd #v2.2.0
         id: config
         with:
           file-path: "${{ env.DOCKER_CONFIG_FILE }}"
@@ -85,7 +85,7 @@ jobs:
         run: |
           echo "IMAGE=${{ matrix.component.name }}" >> $GITHUB_ENV
       - name: "Docker dry run build"
-        uses: netcracker/qubership-workflow-hub/actions/docker-action@d53e0ff4ca97bd496974febd9aee460d1c5e9ba9 #v2.0.8
+        uses: netcracker/qubership-workflow-hub/actions/docker-action@d11baa8a4b42d1a931808c0766ee23eb344c47dd #v2.2.0
         with:
           ref: ${{ github.ref }}
           download-artifact: false
@@ -121,7 +121,7 @@ jobs:
 
       - name: "Chart release"
         id: update-versions
-        uses: netcracker/qubership-workflow-hub/actions/charts-values-update-action@d53e0ff4ca97bd496974febd9aee460d1c5e9ba9 #v2.0.8
+        uses: netcracker/qubership-workflow-hub/actions/charts-values-update-action@d11baa8a4b42d1a931808c0766ee23eb344c47dd #v2.2.0
         with:
           release-version: ${{ inputs.release }}
           config-file: ${{ env.CHART_CONFIG_FILE }}
@@ -155,7 +155,7 @@ jobs:
 
       - name: "Generate tags list"
         id: generate-tags
-        uses: netcracker/qubership-workflow-hub/actions/metadata-action@d53e0ff4ca97bd496974febd9aee460d1c5e9ba9 #v2.0.8
+        uses: netcracker/qubership-workflow-hub/actions/metadata-action@d11baa8a4b42d1a931808c0766ee23eb344c47dd #v2.2.0
         with:
           ref: ${{ inputs.release }}
           default-template: "{{major}}.{{minor}}.{{patch}},{{major}}.{{minor}},{{major}}"
@@ -163,7 +163,7 @@ jobs:
           replace-symbol: '_'
 
       - name: "Docker build and publish"
-        uses: netcracker/qubership-workflow-hub/actions/docker-action@d53e0ff4ca97bd496974febd9aee460d1c5e9ba9 #v2.0.8
+        uses: netcracker/qubership-workflow-hub/actions/docker-action@d11baa8a4b42d1a931808c0766ee23eb344c47dd #v2.2.0
         with:
           ref: release-${{ inputs.release }}
           download-artifact: false
@@ -206,7 +206,7 @@ jobs:
         with:
           artifact-ids: ${{ needs.chart-release.outputs.charts-artifact }}
       - name: "Upload Assets"
-        uses: netcracker/qubership-workflow-hub/actions/assets-action@d53e0ff4ca97bd496974febd9aee460d1c5e9ba9 #v2.0.8
+        uses: netcracker/qubership-workflow-hub/actions/assets-action@d11baa8a4b42d1a931808c0766ee23eb344c47dd #v2.2.0
         with:
           tag: ${{ inputs.release }}
           item-path: "./*.tgz"
