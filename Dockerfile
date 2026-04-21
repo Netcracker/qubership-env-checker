@@ -12,7 +12,7 @@ ARG KUBECTL_VERSION=v1.35.4
 # renovate: datasource=github-releases depName=mikefarah/yq
 ARG YQ_VERSION=v4.50.1
 # renovate: datasource=conda depName=nodejs
-ARG NODEJS_VERSION=25.6.1
+ARG NODEJS_VERSION=25.8.2
 
 ARG NB_USER="jovyan"
 ARG NB_UID="1000"
