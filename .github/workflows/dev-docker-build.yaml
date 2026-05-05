@@ -33,6 +33,11 @@ on:
     - '!.github/**'
     - '.github/workflows/dev-docker-build.yaml'
     - '!docs/**'
+    # Repo uses paths-ignore + negations: without these, everything matches '**' and pushes never trigger a build.
+    - '!Dockerfile'
+    - '!.qubership/docker.cfg'
+    - '!installation/**'
+    - '!jovyan/**'
     - 'CODE-OF-CONDUCT.md'
     - 'CONTRIBUTING.md'
     - 'LICENSE'
