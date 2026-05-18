@@ -18,7 +18,7 @@ ARG JUPYTERLAB_VERSION=4.5.7
 # renovate: datasource=conda depName=jupyterlab-lsp
 ARG JUPYTERLAB_LSP_VERSION=5.2.0
 # renovate: datasource=conda depName=jupyter-lsp
-ARG JUPYTER_LSP_VERSION=2.2.6
+ARG JUPYTER_LSP_VERSION=2.3.1
 
 ARG NB_USER="jovyan"
 ARG NB_UID="1000"
