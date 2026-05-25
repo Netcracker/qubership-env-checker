@@ -1,6 +1,6 @@
 ARG BUILDPLATFORM
 
-FROM --platform=$BUILDPLATFORM debian:trixie-slim@sha256:cedb1ef40439206b673ee8b33a46a03a0c9fa90bf3732f54704f99cb061d2c5a
+FROM --platform=$BUILDPLATFORM debian:trixie-slim@sha256:109e2c65005bf160609e4ba6acf7783752f8502ad218e298253428690b9eaa4b
 
 # CORE versions (managed by Renovate)
 # renovate: datasource=conda depName=python
@@ -8,11 +8,17 @@ ARG PYTHON_VERSION=3.14.4
 # renovate: datasource=github-releases depName=mamba-org/micromamba-releases
 ARG MICROMAMBA_VERSION=2.0.4-0
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
-ARG KUBECTL_VERSION=v1.36.0
+ARG KUBECTL_VERSION=v1.36.1
 # renovate: datasource=github-releases depName=mikefarah/yq
 ARG YQ_VERSION=v4.53.2
 # renovate: datasource=conda depName=nodejs
 ARG NODEJS_VERSION=25.8.2
+# renovate: datasource=conda depName=jupyterlab
+ARG JUPYTERLAB_VERSION=4.5.7
+# renovate: datasource=conda depName=jupyterlab-lsp
+ARG JUPYTERLAB_LSP_VERSION=5.3.0
+# renovate: datasource=conda depName=jupyter-lsp
+ARG JUPYTER_LSP_VERSION=2.3.1
 
 ARG NB_USER="jovyan"
 ARG NB_UID="1000"
@@ -127,7 +133,7 @@ RUN set -x && \
         --yes \
         "${PYTHON_SPECIFIER}" \
         'mamba' \
-        'conda<23.9' \
+        'conda' \
         'jupyter_core'; then \
         echo "Failed to install packages with micromamba"; \
         exit 1; \
@@ -218,10 +224,10 @@ WORKDIR /tmp
 RUN mamba install --yes \
         'traitlets<5.10' \
         'notebook' \
-        'jupyterlab-lsp=5.2.0' \
-        'jupyter-lsp=2.2.6' \
+        "jupyterlab-lsp=${JUPYTERLAB_LSP_VERSION}" \
+        "jupyter-lsp=${JUPYTER_LSP_VERSION}" \
         #'jupyterhub=5.3.0' \
-        'jupyterlab=4.4.5' \
+        "jupyterlab=${JUPYTERLAB_VERSION}" \
         "nodejs>=${NODEJS_VERSION}" \
     && \
     jupyter notebook --generate-config && \
