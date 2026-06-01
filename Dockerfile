@@ -12,7 +12,7 @@ ARG KUBECTL_VERSION=v1.36.1
 # renovate: datasource=github-releases depName=mikefarah/yq
 ARG YQ_VERSION=v4.53.2
 # renovate: datasource=conda depName=nodejs
-ARG NODEJS_VERSION=25.8.2
+ARG NODEJS_VERSION=26.2.0
 # renovate: datasource=conda depName=jupyterlab
 ARG JUPYTERLAB_VERSION=4.5.7
 # renovate: datasource=conda depName=jupyterlab-lsp
