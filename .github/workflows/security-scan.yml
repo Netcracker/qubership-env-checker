@@ -62,13 +62,13 @@ jobs:
       packages: ${{ steps.display-config.outputs.filtered }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
         # See: https://github.com/Netcracker/qubership-workflow-hub/tree/main/actions/docker-config-resolver
       - name: Get Configuration File
-        uses: netcracker/qubership-workflow-hub/actions/docker-config-resolver@e64a1ee2fc2f68ab44a4ef416c27d83ce36ba8e1 # v2.2.1
+        uses: netcracker/qubership-workflow-hub/actions/docker-config-resolver@cabbb90e9471163cfac84bd50ff0296b2803b44c # v2.3.0
         id: config
         with:
           file-path: ".qubership/docker.cfg"
@@ -109,7 +109,7 @@ jobs:
         package: ${{ fromJson(needs.load-config.outputs.packages) }}
 
     name: "Scan (matrix)"
-    uses: netcracker/qubership-workflow-hub/.github/workflows/re-security-scan.yml@6a2de8d62ac5b6998e30f923613c998c263ea9f2 # v2.2.2
+    uses: netcracker/qubership-workflow-hub/.github/workflows/re-security-scan.yml@cabbb90e9471163cfac84bd50ff0296b2803b44c # v2.3.0
     with:
       target: ${{ inputs.target || 'docker' }}
       image: ${{ format('{0}:{1}', matrix.package.image, inputs.tag || matrix.package.security_tag) }}
@@ -131,7 +131,7 @@ jobs:
         package: ${{ fromJson(needs.load-config.outputs.packages) }}
 
     name: "Scan (matrix, manual overrides)"
-    uses: netcracker/qubership-workflow-hub/.github/workflows/re-security-scan.yml@6a2de8d62ac5b6998e30f923613c998c263ea9f2 # v2.2.2
+    uses: netcracker/qubership-workflow-hub/.github/workflows/re-security-scan.yml@cabbb90e9471163cfac84bd50ff0296b2803b44c # v2.3.0
     with:
       target: ${{ inputs.target || 'docker' }}
       image: ${{ format('{0}:{1}', matrix.package.image, inputs.tag || matrix.package.security_tag) }}
@@ -148,7 +148,7 @@ jobs:
       packages: read
     if: ${{ inputs.image != '' && inputs.image != null }}
     name: "Scan (single image)"
-    uses: netcracker/qubership-workflow-hub/.github/workflows/re-security-scan.yml@6a2de8d62ac5b6998e30f923613c998c263ea9f2 # v2.2.2
+    uses: netcracker/qubership-workflow-hub/.github/workflows/re-security-scan.yml@cabbb90e9471163cfac84bd50ff0296b2803b44c # v2.3.0
     with:
       target: ${{ inputs.target || 'docker' }}
       image: ${{ inputs.image }}
