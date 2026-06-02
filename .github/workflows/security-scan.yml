@@ -1,6 +1,9 @@
+# See configuration in .qubership/docker.cfg
+# See documentation: https://github.com/Netcracker/qubership-workflow-hub/tree/main/actions/docker-config-resolver
+
 name: Security Scan Docker Packages
 run-name: >
-  Security Scan #${{ github.run_number }} for ${{ inputs.image != '' && inputs.image != null && inputs.image || 'all repository docker images' }}
+  Security Scan #${{ github.run_number }} for ${{ inputs.image || 'all repository docker images' }}
 on:
   workflow_dispatch:
     inputs:
@@ -12,14 +15,14 @@ on:
           - docker
           - source
       image:
-        description: "Docker image (for docker). By default ghcr.io/<owner>/<repo>:latest"
+        description: "Docker image (for docker). By default ghcr.io/<owner>/<repo>:<tag> from configuration file is used."
         required: false
         default: ""
         type: string
       tag:
-        description: "Tag of the image to scan. By default 'latest'"
+        description: "Tag of the image to scan."
         required: false
-        default: "latest"
+        default: ""
         type: string
       only-high-critical:
         description: "Scope only HIGH + CRITICAL"
@@ -47,83 +50,104 @@ on:
         default: true
         type: boolean
   schedule:
-    - cron: "0 3 * * 0" # every Sunday at 03:00 UTC
+    - cron: "0 1 * * 0" # every Sunday at 01:00 UTC
 
 jobs:
-  debug-packages:
+  load-config:
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       packages: read
     outputs:
-      packages: ${{ steps.docker-packages.outputs.packages }}
-      has-packages: ${{ steps.docker-packages.outputs.has-packages }}
+      packages: ${{ steps.display-config.outputs.filtered }}
     steps:
-      - name: List GHCR packages for this repo
-        id: ghcr
-        uses: Netcracker/qubership-workflow-hub/actions/ghcr-discover-repo-packages@6a2de8d62ac5b6998e30f923613c998c263ea9f2 # v2.2.2
-        env:
-          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
 
-      - name: Exclude Helm chart packages
-        id: docker-packages
+        # See: https://github.com/Netcracker/qubership-workflow-hub/tree/main/actions/docker-config-resolver
+      - name: Get Configuration File
+        uses: netcracker/qubership-workflow-hub/actions/docker-config-resolver@e64a1ee2fc2f68ab44a4ef416c27d83ce36ba8e1 # v2.2.1
+        id: config
+        with:
+          file-path: ".qubership/docker.cfg"
+
+      - name: Display Resolved Configuration
+        id: display-config
         env:
-          PACKAGES: ${{ steps.ghcr.outputs.packages }}
-          CHART_PACKAGE: env-checker-chart
+          CONFIG_JSON: ${{ steps.config.outputs.config }}
+          MANUAL_IMAGE: ${{ inputs.image }}
         run: |
-          packages=$(echo "$PACKAGES" | jq -c --arg chart_package "$CHART_PACKAGE" '
-            map(select((.name | split("/") | last) != $chart_package))
-          ')
-          has_packages=$(echo "$packages" | jq 'length > 0')
-          echo "packages=${packages}" >> "$GITHUB_OUTPUT"
-          echo "has-packages=${has_packages}" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          echo "Resolved Configuration:"
+          FILTERED=$(echo "$CONFIG_JSON" | jq -c '[.[] | select(.security_scan == true)]')
 
-      - name: Print packages
-        env:
-          PACKAGES: ${{ steps.docker-packages.outputs.packages }}
-        run: echo "$PACKAGES" | jq '.'
+          echo "Filtered pretty:"
+          echo "$FILTERED" | jq .
 
-      - name: Continue only if repo has GHCR packages
-        if: ${{ steps.docker-packages.outputs.has-packages == 'true' }}
-        run: echo "Packages found!"
+          echo "filtered=$FILTERED" >> "$GITHUB_OUTPUT"
 
-      - name: No packages found, fail the job
-        if: ${{ steps.docker-packages.outputs.has-packages != 'true' }}
-        run: |
-          echo "No packages found in GHCR for this repository."
-          exit 1
+          if [ "$(echo "$FILTERED" | jq 'length')" -eq 0 ]; then
+            echo "No scan items on configuration."
+            if [ -n "${MANUAL_IMAGE:-}" ]; then
+              echo "Manual image provided; skipping matrix run."
+              exit 0
+            fi
+            exit 1
+          fi
 
   security-scan-matrix:
-    needs: debug-packages
-    if: ${{ inputs.image == '' || inputs.image == null }}
+    if: ${{ github.event_name != 'workflow_dispatch' }}
     permissions:
+      contents: read
       security-events: write
       packages: read
-      contents: read
+    needs: load-config
     strategy:
-      fail-fast: false
       matrix:
-        package: ${{ fromJson(needs.debug-packages.outputs.packages) }}
-        tag: ${{ (github.event_name == 'workflow_dispatch' && fromJson(format('["{0}"]', inputs.tag))) || fromJson('["main"]') }}
+        package: ${{ fromJson(needs.load-config.outputs.packages) }}
 
-    name: "${{ format('{0}:{1}', matrix.package.path, matrix.tag) }}"
+    name: "Scan (matrix)"
     uses: netcracker/qubership-workflow-hub/.github/workflows/re-security-scan.yml@6a2de8d62ac5b6998e30f923613c998c263ea9f2 # v2.2.2
     with:
       target: ${{ inputs.target || 'docker' }}
-      image: ${{ format('{0}:{1}', matrix.package.path, matrix.tag) }}
-      only-high-critical: ${{ github.event_name != 'workflow_dispatch' || inputs.only-high-critical }}
-      trivy-scan: ${{ github.event_name != 'workflow_dispatch' || inputs.trivy-scan }}
-      grype-scan: ${{ github.event_name != 'workflow_dispatch' || inputs.grype-scan }}
-      only-fixed: ${{ github.event_name != 'workflow_dispatch' || inputs.only-fixed }}
-      continue-on-error: ${{ github.event_name != 'workflow_dispatch' || inputs.continue-on-error }}
+      image: ${{ format('{0}:{1}', matrix.package.image, inputs.tag || matrix.package.security_tag) }}
+      only-high-critical: ${{ matrix.package.security_only_high_critical }}
+      trivy-scan: ${{ matrix.package.security_trivy_scan }}
+      grype-scan: ${{ matrix.package.security_grype_scan }}
+      only-fixed: ${{ matrix.package.security_only_fixed }}
+      continue-on-error: ${{ matrix.package.security_continue_on_error }}
 
-  security-scan-single:
-    needs: debug-packages
-    if: ${{ inputs.image != '' && inputs.image != null }}
+  security-scan-matrix-manual:
+    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.image == '' || inputs.image == null) }}
     permissions:
+      contents: read
       security-events: write
       packages: read
+    needs: load-config
+    strategy:
+      matrix:
+        package: ${{ fromJson(needs.load-config.outputs.packages) }}
+
+    name: "Scan (matrix, manual overrides)"
+    uses: netcracker/qubership-workflow-hub/.github/workflows/re-security-scan.yml@6a2de8d62ac5b6998e30f923613c998c263ea9f2 # v2.2.2
+    with:
+      target: ${{ inputs.target || 'docker' }}
+      image: ${{ format('{0}:{1}', matrix.package.image, inputs.tag || matrix.package.security_tag) }}
+      only-high-critical: ${{ inputs.only-high-critical }}
+      trivy-scan: ${{ inputs.trivy-scan }}
+      grype-scan: ${{ inputs.grype-scan }}
+      only-fixed: ${{ inputs.only-fixed }}
+      continue-on-error: ${{ inputs.continue-on-error }}
+
+  security-scan-single:
+    permissions:
       contents: read
-    name: "Run Security Scan (single image)"
+      security-events: write
+      packages: read
+    if: ${{ inputs.image != '' && inputs.image != null }}
+    name: "Scan (single image)"
     uses: netcracker/qubership-workflow-hub/.github/workflows/re-security-scan.yml@6a2de8d62ac5b6998e30f923613c998c263ea9f2 # v2.2.2
     with:
       target: ${{ inputs.target || 'docker' }}
