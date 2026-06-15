@@ -10,7 +10,7 @@ ARG MICROMAMBA_VERSION=2.0.4-0
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
 ARG KUBECTL_VERSION=v1.36.1
 # renovate: datasource=github-releases depName=mikefarah/yq
-ARG YQ_VERSION=v4.53.2
+ARG YQ_VERSION=v4.53.3
 # renovate: datasource=conda depName=nodejs
 ARG NODEJS_VERSION=26.2.0
 # renovate: datasource=conda depName=jupyterlab
