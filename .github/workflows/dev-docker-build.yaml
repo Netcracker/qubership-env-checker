@@ -28,7 +28,6 @@ on:
   push:
     branches:
     - '**'
-    - '!renovate/**'
     paths-ignore:
     - '**'
     - '!.github/**'
@@ -121,6 +120,6 @@ jobs:
           platforms: ${{ matrix.component.platforms }}
           checkout: "false"
           tags: ${{ steps.prepare_tags.outputs.tags }}
-          dry-run: ${{ github.event.inputs.dry-run || 'false' }}
+          dry-run: ${{ github.event.inputs.dry-run || github.actor == 'renovate[bot]' || 'false' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
