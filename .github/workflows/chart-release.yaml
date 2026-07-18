@@ -1,21 +1,8 @@
 ---
 
-# This workflow is used to release Helm charts and Docker images.
-# It has a dry run stage to check the build process without actually publishing the artifacts.
-# The workflow is triggered manually and allows the user to specify the release version.
-# The workflow also creates a GitHub release after the deployment stage if the deployment is successful.
-# The workflow uses the `netcracker/qubership-workflow-hub/actions/charts-values-update-action` action to perform the release steps.
-# The workflow requires the following inputs:
-# - `release`: The release version to publish.
-# The workflow requires several configuration files:
-# - configuration file used for the release process: `.github/helm-charts-release-config.yaml`
-#   Example: config/examples/helm-charts-release-config.yaml
-# - Docker build configuration file: `.github/docker-build-config.json`
-#   Example: config/examples/docker-build-config.json
-# - Assets configuration file: `.github/assets-config.yml`
-#   Example: config/examples/assets-config.yml
-# - GitHub release drafter configuration file: `.github/release-drafter-config.yml`
-#   Example: config/examples/release-drafter-config.yml
+# This workflow validates or publishes a versioned Docker image, Helm chart, and GitHub release.
+# Dry-run mode uses read-only permissions, builds the image, and uploads a packaged chart without publishing a release.
+# Release configuration: .qubership/helm-charts-release-config.yaml and .qubership/docker.cfg.
 
 name: "Helm Charts Release"
 on:
@@ -25,6 +12,11 @@ on:
         description: 'Release version without "v" prefix'
         required: true
         type: string
+      dry-run:
+        description: 'Validate and package the release without publishing or changing the repository'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -96,8 +88,45 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
+  chart-dry-run:
+    name: "Helm Chart Dry Run"
+    if: ${{ inputs.dry-run }}
+    permissions:
+      contents: read
+      packages: read
+    needs: [check-tag, load-docker-build-components, docker-check-build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: "Add github.vars into github.env"
+        env:
+          VARS_JSON: '${{ toJson(vars) }}'
+        run: |
+          echo "${VARS_JSON}" | jq -r 'to_entries|map("\(.key)=\(.value)")|.[]' >> $GITHUB_ENV
+
+      - name: "Prepare Helm chart"
+        uses: netcracker/qubership-workflow-hub/actions/charts-values-update-action@8c6dbeb901920bae9f40d7d7b646d8d9127e1ce7 # v2.4.0
+        with:
+          release-version: ${{ inputs.release }}
+          config-file: ${{ env.CHART_CONFIG_FILE }}
+          default-tag: ${{ inputs.release }}
+          create-release-branch: false
+          package-charts: true
+          publish-charts: false
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ACTOR: ${{ github.actor }}
+
+      - name: "Show prepared release changes"
+        run: git diff --check && git diff -- charts
+
   chart-release:
     name: "Helm Charts Release"
+    if: ${{ !inputs.dry-run }}
     permissions:
       contents: write
       packages: write
@@ -105,6 +134,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       images-versions: ${{ steps.update-versions.outputs.images-versions }}
+      # Keep the legacy output spelling used by charts-values-update-action@v2.4.0.
       charts-artifact: ${{ steps.update-versions.outputs.released-chart-atrifact }}
     steps:
       - name: Checkout code
@@ -126,6 +156,7 @@ jobs:
           release-version: ${{ inputs.release }}
           config-file: ${{ env.CHART_CONFIG_FILE }}
           default-tag: ${{ inputs.release }}
+          create-release-branch: true
           package-charts: true
           publish-charts: true
 
@@ -138,6 +169,7 @@ jobs:
 
   docker-build:
     name: "Docker Build and Publish"
+    if: ${{ !inputs.dry-run }}
     needs: [chart-release, load-docker-build-components]
     permissions:
       contents: read
@@ -175,6 +207,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
   github-release:
+    if: ${{ !inputs.dry-run }}
     permissions:
       contents: write
       packages: write
