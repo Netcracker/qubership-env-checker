@@ -57,6 +57,8 @@ jobs:
       packages: read
     outputs:
       packages: ${{ steps.config.outputs.config }}
+      # Bot branches must build without publishing; merged code on the default branch follows normal publication.
+      force-dry-run: ${{ contains(fromJSON(steps.policy.outputs.config)['no-publish-actors'].*.id, format('{0}', github.actor_id)) && github.ref != format('refs/heads/{0}', github.event.repository.default_branch) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -68,6 +70,35 @@ jobs:
         id: config
         with:
           file-path: "${{ env.CONFIG_FILE }}"
+
+      - name: Resolve workflow policy
+        id: policy
+        uses: netcracker/qubership-workflow-hub/actions/config-resolver@86c8965947f83325e558d72c5d9e0a5cde99ee21 # PR #866 (unreleased)
+        with:
+          file-path: .qubership/workflow-policy.json
+          schema: workflow-policy/v1
+
+      - name: Validate workflow policy
+        env:
+          CONFIG_JSON: ${{ steps.policy.outputs.config }}
+        run: |
+          jq -e '
+            def valid_actors:
+              type == "array"
+              and length > 0
+              and all(.[];
+                type == "object"
+                and (keys == ["id", "login"])
+                and (.id | type == "string" and test("^[0-9]+$"))
+                and (.login | type == "string" and length > 0))
+              and (map(.id) | length == (unique | length))
+              and (map(.login) | length == (unique | length));
+            type == "object"
+            and .schema == "workflow-policy/v1"
+            and (."no-publish-actors" | valid_actors)
+            and (."skip-pr-automation-actors" | valid_actors)
+            and ((keys - ["schema", "no-publish-actors", "skip-pr-automation-actors"]) | length == 0)
+          ' <<< "$CONFIG_JSON" > /dev/null
 
   docker-build:
     name: "Build and Publish Docker Image"
@@ -120,6 +151,6 @@ jobs:
           platforms: ${{ matrix.component.platforms }}
           checkout: "false"
           tags: ${{ steps.prepare_tags.outputs.tags }}
-          dry-run: ${{ github.event.inputs.dry-run || github.actor == 'renovate[bot]' || 'false' }}
+          dry-run: ${{ inputs.dry-run || needs.load-config.outputs.force-dry-run == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -20,7 +20,7 @@ permissions:
 jobs:
   assign-labels:
     name: "Assign Labels to PR #${{ github.event.pull_request.number }}"
-    if: (github.event.pull_request.merged == false) && (github.event.pull_request.user.login != 'dependabot[bot]') && (github.event.pull_request.user.login != 'github-actions[bot]')
+    if: github.event.pull_request.merged == false
     permissions:
       pull-requests: write
       contents: read
@@ -32,8 +32,38 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Resolve workflow policy
+        id: policy
+        uses: netcracker/qubership-workflow-hub/actions/config-resolver@86c8965947f83325e558d72c5d9e0a5cde99ee21 # PR #866 (unreleased)
+        with:
+          file-path: .qubership/workflow-policy.json
+          schema: workflow-policy/v1
+
+      - name: Validate workflow policy
+        env:
+          CONFIG_JSON: ${{ steps.policy.outputs.config }}
+        run: |
+          jq -e '
+            def valid_actors:
+              type == "array"
+              and length > 0
+              and all(.[];
+                type == "object"
+                and (keys == ["id", "login"])
+                and (.id | type == "string" and test("^[0-9]+$"))
+                and (.login | type == "string" and length > 0))
+              and (map(.id) | length == (unique | length))
+              and (map(.login) | length == (unique | length));
+            type == "object"
+            and .schema == "workflow-policy/v1"
+            and (."no-publish-actors" | valid_actors)
+            and (."skip-pr-automation-actors" | valid_actors)
+            and ((keys - ["schema", "no-publish-actors", "skip-pr-automation-actors"]) | length == 0)
+          ' <<< "$CONFIG_JSON" > /dev/null
+
       - name: "Execute assign labels"
         id: action-assign-labels
+        if: ${{ !contains(fromJSON(steps.policy.outputs.config)['skip-pr-automation-actors'].*.id, format('{0}', github.event.pull_request.user.id)) }}
         uses: mauroalderete/action-assign-labels@671a4ca2da0f900464c58b8b5540a1e07133e915 # v1.5.1
         with:
           pull-request-number: ${{ github.event.pull_request.number }}
