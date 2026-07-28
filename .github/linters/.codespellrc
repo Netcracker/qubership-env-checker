@@ -1,0 +1,4 @@
+[codespell]
+# "occured" is quoted verbatim from the product's own log output (jovyan/utils/env_checker_utils.py),
+# so the troubleshooting reference must reproduce it exactly for operators to match it.
+ignore-words-list = occured
