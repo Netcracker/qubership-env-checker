@@ -1,36 +1,42 @@
-# Agent instructions
+# Repository agent instructions
 
-## Repository
+## Scope
 
-- Purpose: Qubership Environment Checker is a Jupyter-based microservice for validating Kubernetes and OpenShift
-  environments and generating reports.
-- Main paths: `charts/env-checker/` holds the Helm chart; `jovyan/` holds runtime and test assets;
-  `agent-packages/troubleshoot-env-checker/` holds the advisory troubleshooting skill.
-- Read `docs/InstallationGuide.md` for the parameter reference, hardware-sizing link, and smoke-test procedures.
+- Qubership Environment Checker is a Jupyter-based service that validates Kubernetes and OpenShift environments.
+- This file contains repository-wide guidance; keep path-specific rules near the affected code.
+
+## Repository map
+
+- `charts/env-checker/` contains the Helm chart for deployment configuration.
+- `Dockerfile`, `installation/`, and `jovyan/` define the container image, startup scripts, and runtime behavior.
+- `jovyan/tests/` contains notebook-driven unit-test sources and examples.
+- `agent-packages/troubleshoot-env-checker/` packages the read-only troubleshooting skill and its reference catalog.
 
 ## Commands
 
-- Run the documented unit-test notebook from `/home/jovyan`:
+- For changes to these root instructions, run `pre-commit run --files AGENTS.md CLAUDE.md`.
+- For the repository-wide configured pre-commit checks, run `pre-commit run --all-files`.
+- To run the documented notebook unit-test flow inside the image, from `/home/jovyan` run
   `bash run.sh --html=true tests/CompositeUnitTestNotebook.ipynb`.
-- List troubleshooting catalog cases:
+- Pull requests run the `Lint Code Base` Super-Linter workflow; run the applicable local checks before relying on CI.
 
-  ```bash
-  python3 agent-packages/troubleshoot-env-checker/.apm/skills/troubleshoot-env-checker/scripts/show_cases.py \
-    agent-packages/troubleshoot-env-checker/.apm/skills/troubleshoot-env-checker/references/troubleshooting.md
-  ```
+## Non-obvious invariants
 
-## Change boundaries
+- Keep production deployments headless: `PRODUCTION_MODE=true` intentionally removes interactive UI because
+  env-checker has cluster-wide `view` access; verify deployment changes in `charts/env-checker/`.
+- `docs/troubleshooting.md` is a symlink. Update the catalog at
+  `agent-packages/troubleshoot-env-checker/.apm/skills/troubleshoot-env-checker/references/troubleshooting.md`
+  instead and verify the link target.
 
-- Edit the troubleshooting reference at
-  `agent-packages/troubleshoot-env-checker/.apm/skills/troubleshoot-env-checker/references/troubleshooting.md`;
-  `docs/troubleshooting.md` is its symlink.
-- Keep the troubleshooting skill read-only and advisory; it must not access or change live systems.
+## Done when
 
-## Updating Key Conventions
+- Relevant configured checks pass, including `pre-commit` for changed text or configuration files.
+- Runtime changes use the documented notebook test flow when applicable.
+- Report checks run and checks that could not be run.
 
-- If a user corrects a mistake that could recur in this repository, propose the smallest complete instruction.
-- Add the exact approved instruction; omit task-specific, personal, sensitive, duplicate, or tool-enforced guidance.
+## Context routing
 
-## Key Conventions
-
-- No key conventions recorded yet.
+- Before changing deployment parameters or access, read `docs/InstallationGuide.md` for the supported modes
+  and RBAC requirements.
+- Before changing notebook execution or test behavior, read `docs/tests/TestGuide.md` for the container
+  working directory and supported test flow.
