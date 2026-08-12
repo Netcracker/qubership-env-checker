@@ -36,6 +36,7 @@ on:
     # Repo uses paths-ignore + negations: without these, everything matches '**' and pushes never trigger a build.
     - '!Dockerfile'
     - '!.qubership/docker.cfg'
+    - '!.qubership/workflow-policy.json'
     - '!installation/**'
     - '!jovyan/**'
     - 'CODE-OF-CONDUCT.md'
@@ -54,9 +55,12 @@ jobs:
   load-config:
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       packages: read
     outputs:
       packages: ${{ steps.config.outputs.config }}
+      # Restricted bot branches must build without publishing. Default-branch pushes keep normal publication behavior.
+      force-dry-run: ${{ contains(fromJSON(steps.policy.outputs.config)['no-publish-actors'].*.id, format('{0}', github.actor_id)) && github.ref != format('refs/heads/{0}', github.event.repository.default_branch) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -68,6 +72,31 @@ jobs:
         id: config
         with:
           file-path: "${{ env.CONFIG_FILE }}"
+
+      - name: Resolve workflow policy
+        id: policy
+        uses: netcracker/qubership-workflow-hub/actions/config-resolver@b6bee6f61fdc8b367777c1173fc852a58878a6a7 # v2.5.0
+        with:
+          file-path: .qubership/workflow-policy.json
+          schema: workflow-policy/v1
+
+      - name: Validate workflow policy
+        env:
+          CONFIG_JSON: ${{ steps.policy.outputs.config }}
+        run: |
+          jq -e '
+            def valid_actor:
+              type == "object"
+              and (keys == ["id", "login"])
+              and (.id | type == "string" and test("^[0-9]+$"))
+              and (.login | type == "string" and length > 0);
+            type == "object"
+            and .schema == "workflow-policy/v1"
+            and (."no-publish-actors" | type == "array" and length > 0 and all(.[]; valid_actor))
+            and (."no-publish-actors" | map(.id) | length == (unique | length))
+            and (."no-publish-actors" | map(.login) | length == (unique | length))
+            and ((keys - ["schema", "no-publish-actors"]) | length == 0)
+          ' <<< "$CONFIG_JSON" > /dev/null
 
   docker-build:
     name: "Build and Publish Docker Image"
@@ -120,6 +149,6 @@ jobs:
           platforms: ${{ matrix.component.platforms }}
           checkout: "false"
           tags: ${{ steps.prepare_tags.outputs.tags }}
-          dry-run: ${{ github.event.inputs.dry-run || github.actor == 'renovate[bot]' || 'false' }}
+          dry-run: ${{ inputs.dry-run || needs.load-config.outputs.force-dry-run == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

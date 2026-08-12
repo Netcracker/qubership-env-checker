@@ -1,0 +1,13 @@
+{
+  "schema": "workflow-policy/v1",
+  "no-publish-actors": [
+    {
+      "id": "29139614",
+      "login": "renovate[bot]"
+    },
+    {
+      "id": "49699333",
+      "login": "dependabot[bot]"
+    }
+  ]
+}
