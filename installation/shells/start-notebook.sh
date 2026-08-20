@@ -10,8 +10,10 @@ set -e
 # The Jupyter command to launch JupyterLab by default
 DOCKER_STACKS_JUPYTER_CMD="${DOCKER_STACKS_JUPYTER_CMD:=lab}"
 
-# initialize params for Jupyter Server start: set UI access token
-NOTEBOOK_ARGS="--ServerApp.token=$(printenv ENVIRONMENT_CHECKER_UI_ACCESS_TOKEN)"
+# Set the UI access token through the environment instead of the command line:
+# start.sh logs its own arguments, which would print the token at every start.
+JUPYTER_TOKEN="$(printenv ENVIRONMENT_CHECKER_UI_ACCESS_TOKEN)"
+export JUPYTER_TOKEN
 
 # shellcheck disable=SC1091,SC2086
-exec /usr/local/bin/start.sh jupyter ${DOCKER_STACKS_JUPYTER_CMD} ${NOTEBOOK_ARGS} "$@"
+exec /usr/local/bin/start.sh jupyter ${DOCKER_STACKS_JUPYTER_CMD} "$@"
