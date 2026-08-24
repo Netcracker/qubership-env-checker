@@ -68,14 +68,14 @@ jobs:
           persist-credentials: false
 
       - name: Get Configuration File
-        uses: netcracker/qubership-workflow-hub/actions/docker-config-resolver@b6bee6f61fdc8b367777c1173fc852a58878a6a7 # v2.5.0
+        uses: netcracker/qubership-workflow-hub/actions/docker-config-resolver@27fd7674286e5f561a6fd8277f2f389ff96ddb9e # v2.6.0
         id: config
         with:
           file-path: "${{ env.CONFIG_FILE }}"
 
       - name: Resolve workflow policy
         id: policy
-        uses: netcracker/qubership-workflow-hub/actions/config-resolver@b6bee6f61fdc8b367777c1173fc852a58878a6a7 # v2.5.0
+        uses: netcracker/qubership-workflow-hub/actions/config-resolver@27fd7674286e5f561a6fd8277f2f389ff96ddb9e # v2.6.0
         with:
           file-path: .qubership/workflow-policy.json
           schema: workflow-policy/v1
@@ -116,7 +116,7 @@ jobs:
           persist-credentials: false
 
       - name: "Create name"
-        uses: netcracker/qubership-workflow-hub/actions/metadata-action@b6bee6f61fdc8b367777c1173fc852a58878a6a7 # v2.5.0
+        uses: netcracker/qubership-workflow-hub/actions/metadata-action@27fd7674286e5f561a6fd8277f2f389ff96ddb9e # v2.6.0
         id: metadata
         with:
           default-template: "{{ref-name}},git-{{short-sha}}"
@@ -143,7 +143,7 @@ jobs:
           echo "**Tags:** ${{ steps.prepare_tags.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
 
       - name: "Build and Publish Docker Image"
-        uses: netcracker/qubership-workflow-hub/actions/docker-action@b6bee6f61fdc8b367777c1173fc852a58878a6a7 # v2.5.0
+        uses: netcracker/qubership-workflow-hub/actions/docker-action@27fd7674286e5f561a6fd8277f2f389ff96ddb9e # v2.6.0
         with:
           component: ${{ toJson(matrix.component) }}
           platforms: ${{ matrix.component.platforms }}
