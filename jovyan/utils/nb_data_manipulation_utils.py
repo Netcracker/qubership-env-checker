@@ -8,9 +8,12 @@ import scrapbook as sb
 import constants
 import json_schema_validation
 import json
+import structured_log
 
 from pathlib import Path
 from NotebookMetrics import NotebookMetrics
+
+log = structured_log.get_logger('nb_data_manipulation_utils')
 
 S3_STORAGE_SERVER_URL = env_checker_utils.get_env_variable_value_by_name('STORAGE_SERVER_URL')
 BUCKET_NAME = env_checker_utils.get_env_variable_value_by_name('ENVCHECKER_STORAGE_BUCKET')
@@ -45,7 +48,8 @@ def validate_and_save_metrics(executed_nb_path):
                     if 'result' in tags:
                         nb_result = 0 if cell['outputs'][0]['data']['text/plain'] == 'True' else 1
         except KeyError:
-            print(f"Could not find result tag in notebook: {executed_nb_path}.ipynb")
+            log.error('Result tag not found in the notebook',
+                      notebook_path=f'{executed_nb_path}.ipynb')
             sys.exit(1)
         ns = 'null'
         app = 'null'
@@ -117,7 +121,7 @@ def extract_notebook_execution_data(notebook_base_name: str) -> list[NotebookMet
                 )
             )
         return res
-    print(f'No metrics data was recorded in {nb_path}')
+    log.error('No metrics recorded in the notebook', notebook_path=nb_path)
     sys.exit(1)
 
 
@@ -180,13 +184,14 @@ def extract_notebook_execution_data_from_result_file(executed_notebook_path: str
                             )
                         )
                 else:
-                    print(
-                        f"Could not extract 'metrics' section from result.yaml for executed notebook: "
-                        f"{executed_notebook_path}"
-                    )
+                    log.error('Metrics section missing from the result file',
+                              notebook_path=executed_notebook_path,
+                              result_file='result.yaml')
                     sys.exit(1)
                 return res
-        print(f'Cannot find {executed_notebook_path} in result.yaml')
+        log.error('Executed notebook not found in the result file',
+                  notebook_path=executed_notebook_path,
+                  result_file='result.yaml')
         sys.exit(1)
 
 
@@ -213,7 +218,8 @@ def extract_notebook_execution_data_for_s3_pushing(notebook_base_name: str) -> d
             constants.INITIATOR_LABEL: metrics[constants.INITIATOR_LABEL]
         }
     except Exception:
-        print(f"Could not extract execution metrics of notebook: {notebook_base_name}.ipynb")
+        log.exception('Cannot extract notebook execution metrics',
+                      notebook_name=f'{notebook_base_name}.ipynb')
         sys.exit(1)
 
 
@@ -248,13 +254,14 @@ def extract_nb_execution_data_from_result_file_for_s3_pushing(executed_notebook_
                             ),
                     }
                 else:
-                    print(
-                        f"Could not extract 'metrics' section from result.yaml for executed notebook: "
-                        f"{executed_notebook_path}"
-                    )
+                    log.error('Metrics section missing from the result file',
+                              notebook_path=executed_notebook_path,
+                              result_file='result.yaml')
                     sys.exit(1)
                 return res
-        print(f'Cannot find {executed_notebook_path} in result.yaml')
+        log.error('Executed notebook not found in the result file',
+                  notebook_path=executed_notebook_path,
+                  result_file='result.yaml')
         sys.exit(1)
 
 
@@ -271,7 +278,7 @@ def update_s3_link_label_for_notebook(notebook_base_name: str):
             m[constants.S3_LINK_LABEL] = S3_LINK
         nbformat.write(notebook, notebook_path)
     else:
-        print(f'Cannot find report: ${notebook_path}')
+        log.warning('Report not found', notebook_path=notebook_path)
 
 
 def update_s3_link_label_for_notebook_from_result_file(executed_notebook_path: str):
@@ -285,7 +292,9 @@ def update_s3_link_label_for_notebook_from_result_file(executed_notebook_path: s
                 with open(f'{result_yml_dir_location}/result.yaml', 'w') as result_yml:
                     yaml.dump(result, result_yml, default_flow_style=False)
                 return
-        print(f'Cannot find {executed_notebook_path} in result.yaml')
+        log.warning('Executed notebook not found in the result file',
+                    notebook_path=executed_notebook_path,
+                    result_file='result.yaml')
 
 
 def extract_metrics_from_nb_scraps(executed_notebook_path) -> bool:
