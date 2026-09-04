@@ -25,11 +25,11 @@ jobs:
           echo "Version: ${{ github.event.inputs.version }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Check if tag exists
         id: check_tag
-        uses: netcracker/qubership-workflow-hub/actions/tag-checker@6b356d28e46b2d4683cccb1d91f92643d7f0c513 # v2.0.11
+        uses: netcracker/qubership-workflow-hub/actions/tag-checker@27fd7674286e5f561a6fd8277f2f389ff96ddb9e # v2.6.0
         with:
           tag: 'v${{ github.event.inputs.version }}'
         env:
@@ -54,7 +54,7 @@ jobs:
       platforms: ${{ steps.load_component.outputs.platforms }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Load Docker Configuration
         id: load_component
@@ -86,24 +86,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Change Chart Version Action
-        uses: netcracker/qubership-workflow-hub/actions/chart-version@6b356d28e46b2d4683cccb1d91f92643d7f0c513 # v2.0.11
+        uses: netcracker/qubership-workflow-hub/actions/chart-version@27fd7674286e5f561a6fd8277f2f389ff96ddb9e # v2.6.0
         with:
           new-chart-version: ${{ github.event.inputs.version }}
           chart-yaml-path: ${{ github.event.inputs.path-to-chart }}
 
       - name: Run Commit and Push Action
-        uses: netcracker/qubership-workflow-hub/actions/commit-and-push@6b356d28e46b2d4683cccb1d91f92643d7f0c513 # v2.0.11
+        uses: netcracker/qubership-workflow-hub/actions/commit-and-push@27fd7674286e5f561a6fd8277f2f389ff96ddb9e # v2.6.0
         with:
           commit_message: "Update chart version to v${{ github.event.inputs.version }}"
   tag:
     needs: [change-chart]
-    uses: netcracker/qubership-workflow-hub/.github/workflows/tag-creator.yml@6b356d28e46b2d4683cccb1d91f92643d7f0c513 # v2.0.11
+    uses: netcracker/qubership-workflow-hub/.github/workflows/tag-creator.yml@27fd7674286e5f561a6fd8277f2f389ff96ddb9e # v2.6.0
     with:
       tag-name: "v${{ github.event.inputs.version }}"
 
   docker-build:
     needs: [tag, load-docker-build-components]
-    uses: netcracker/qubership-workflow-hub/.github/workflows/docker-publish.yml@6b356d28e46b2d4683cccb1d91f92643d7f0c513 # v2.0.11
+    uses: netcracker/qubership-workflow-hub/.github/workflows/docker-publish.yml@27fd7674286e5f561a6fd8277f2f389ff96ddb9e # v2.6.0
     with:
       ref: v${{ inputs.version }}
       download-artifact: false
@@ -113,7 +113,7 @@ jobs:
 
   github-release:
     needs: [tag, docker-build]
-    uses: netcracker/qubership-workflow-hub/.github/workflows/release-drafter.yml@6b356d28e46b2d4683cccb1d91f92643d7f0c513 # v2.0.11
+    uses: netcracker/qubership-workflow-hub/.github/workflows/release-drafter.yml@27fd7674286e5f561a6fd8277f2f389ff96ddb9e # v2.6.0
     with:
       version: ${{ github.event.inputs.version }}
       publish: false
@@ -123,10 +123,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Archive and Upload Assets
-        uses: netcracker/qubership-workflow-hub/actions/archive-and-upload-assets@6b356d28e46b2d4683cccb1d91f92643d7f0c513 # v2.0.11
+        uses: netcracker/qubership-workflow-hub/actions/archive-and-upload-assets@27fd7674286e5f561a6fd8277f2f389ff96ddb9e # v2.6.0
         with:
           config-path: './.github/assets-config.yml'
           dist-path: './dist'

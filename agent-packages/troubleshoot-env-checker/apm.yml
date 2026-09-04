@@ -1,0 +1,4 @@
+name: troubleshoot-env-checker
+version: 1.0.0
+description: Diagnose failures of Qubership Environment Checker (RBAC and cluster access, installation, S3 report storage, monitoring metrics, Git integration, UI authentication, notebook execution) from a pasted problem description and logs, with no live system access.
+author: Qubership
