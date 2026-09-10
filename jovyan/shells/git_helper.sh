@@ -4,6 +4,21 @@
 # New implementations should use utils/integration/git_helper.py with GIT_* environment variables.
 # See GitIntegrationDocumentation.md for details.
 
+# Structured logging helper. Records go to stderr so they never mix with the
+# path this script echoes back to its caller on stdout.
+if [ -f /home/jovyan/shells/log_json.sh ]; then
+    # shellcheck disable=SC1091
+    # shellcheck source=/home/jovyan/shells/log_json.sh
+    source /home/jovyan/shells/log_json.sh
+else
+    # Degraded fallback when the helper is not part of the image.
+    log_json() { echo "$@" >&2; }
+    log_debug() { :; }
+    log_info() { log_json INFO "$@"; }
+    log_warn() { log_json WARN "$@"; }
+    log_error() { log_json ERROR "$@"; }
+fi
+
 # Set global variables on top level (for backward compatibility with source)
 git_source_path=$1
 # get folder for storage "https://git.example.com/project/env-checker-notebooks.git" -> "env-checker-notebooks"
@@ -14,9 +29,9 @@ absolute_path="/home/jovyan/$relative_path"
 gitProcess() {
     # Use global variables (backward compatibility)
     prepare_git_config_files "$git_source_path"
-    echo -e "\ngitProcess has been started"
+    log_info "Git process started" git_source_path "$git_source_path"
     check_relative_path_is_exists "$git_source_path" "$relative_path" "$absolute_path"
-    echo -e "gitProcess has been finished\n"
+    log_info "Git process finished" git_source_path "$git_source_path"
     echo "$relative_path"
 }
 
@@ -76,40 +91,37 @@ prepare_git_config_files() {
 
         # Domain is required - fail if not set
         if [ -z "$git_domain" ]; then
-            echo "ERROR: Git domain is not specified. Please set ENVCHECKER_GIT_DOMAIN environment variable or provide a repository URL with domain."
+            log_error "Git domain is not specified" env_var "ENVCHECKER_GIT_DOMAIN"
             return 1
         fi
 
         # Build full authenticated URL for debugging
         local auth_url="https://$username:$token@$git_domain"
-        echo "DEBUG: Git authentication URL: https://$username:***@$git_domain"
-        echo "DEBUG: Using Git domain: $git_domain"
+        log_debug "Git authentication configured" username "$username" git_domain "$git_domain"
 
         # Store credentials for Git
         echo "$auth_url" >>~/.git-credentials
     else
-        echo "WARNING: No Git credentials found (neither ENVCHECKER_GIT_USERNAME/ENVCHECKER_GIT_TOKEN env vars nor /etc/git/git-user/git-token files)"
+        log_warn "No Git credentials found" sources_checked "ENVCHECKER_GIT_USERNAME/ENVCHECKER_GIT_TOKEN, /etc/git/git-user, /etc/git/git-token"
     fi
 }
 
 check_relative_path_is_exists() {
     # Use global variables (backward compatibility)
-    echo "git_source_path=$git_source_path"
-    echo "relative_path=$relative_path"
-    echo "absolute_path=$absolute_path"
+    log_info "Git paths resolved" git_source_path "$git_source_path" relative_path "$relative_path" absolute_path "$absolute_path"
 
     # Debug: Show full Git URL (with masked credentials)
     if [[ "$git_source_path" == http* ]]; then
         local debug_url
         debug_url=$(echo "$git_source_path" | sed -E 's|://([^:]+):([^@]+)@|://\1:***@|')
-        echo "DEBUG: Full Git repository URL: $debug_url"
+        log_debug "Git repository URL" repo_url "$debug_url"
     fi
 
     if [ -d "/home/jovyan/$relative_path" ]; then
-        echo "Path exists: /home/jovyan/$relative_path. Run the pull operation"
+        log_info "Path exists; running the pull operation" path "/home/jovyan/$relative_path"
         run_git_pull
     else
-        echo "Path does not exist: /home/jovyan/$relative_path. Run the checkout operation"
+        log_info "Path does not exist; running the checkout operation" path "/home/jovyan/$relative_path"
         run_git_checkout
     fi
 }
@@ -140,14 +152,14 @@ download_folder_or_file_from_git() {
     local folder_or_file_path=$3
     local output_folder=$4
 
-    echo -e "\ndownload_folder_from_git has been started"
+    log_info "Folder download started" repo_url "$repo_url" branch "$branch"
     if [ -z "$repo_url" ] || [ -z "$branch" ] || [ -z "$folder_or_file_path" ] || [ -z "$output_folder" ]; then
-        echo "Error: Repository URL, branch name, folder path, and output folder name are required."
+        log_error "Missing required arguments" missing_args "repo_url, branch, folder_or_file_path, output_folder"
         return 1
     fi
 
     if [ -d "$output_folder/$folder_or_file_path" ] || [ -f "$output_folder/$folder_or_file_path" ]; then
-        echo "The $output_folder/$folder_or_file_path already exists. Skip cloning."
+        log_info "Target already exists; skipping the clone" output_folder "$output_folder" path "$folder_or_file_path"
         return 0
     fi
 
@@ -156,20 +168,20 @@ download_folder_or_file_from_git() {
     # --filter=blob:none - skipped blob-objects (for data reduction)
     # --sparse           - cloning in sparse-checkout mode
     if ! git clone --branch "$branch" --depth 1 --filter=blob:none --sparse "$repo_url" "$output_folder"; then
-        echo "Error while cloning repository."
+        log_error "Failed to clone the repository" repo_url "$repo_url"
         return 1
     fi
 
     cd "$output_folder" || exit # Goes to the directory into which the repository was cloned.
-    echo "Setting up sparse-checkout..."
+    log_info "Setting up sparse checkout" sparse_path "$folder_or_file_path"
     git sparse-checkout init --no-interaction # Initializes sparse-checkout. --no-interaction - executing a command without user confirmation
     if ! git sparse-checkout set "$folder_or_file_path"; then
-        echo "Error configuring sparse-checkout."
+        log_error "Failed to configure sparse checkout" sparse_path "$folder_or_file_path"
         return 1
     fi
 
-    echo "Download folder from git completed successfully."
-    echo -e "download_folder_from_git has been finished\n"
+    log_info "Folder download completed" output_folder "$output_folder"
+    log_info "Folder download finished" output_folder "$output_folder"
 
     return 0
 }
@@ -179,7 +191,7 @@ if [ "${BASH_SOURCE[0]}" == "${0}" ]; then
     if [ "$1" == "download_folder_or_file" ]; then
         # Pass repo_url (second argument) to prepare_git_config_files for domain extraction
         if ! prepare_git_config_files "${2:-}"; then
-            echo "ERROR: Failed to prepare Git configuration"
+            log_error "Failed to prepare the Git configuration"
             exit 1
         fi
         download_folder_or_file_from_git "$2" "$3" "$4" "$5"

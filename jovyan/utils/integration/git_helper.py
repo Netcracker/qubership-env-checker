@@ -5,6 +5,12 @@ import shutil
 import requests
 from urllib.parse import urlsplit, urlunsplit, quote
 
+# This script is also started directly, without the PYTHONPATH that run.sh sets.
+sys.path.append("/home/jovyan/utils")  # noqa: E402
+import structured_log  # noqa: E402
+
+log = structured_log.get_logger('integration.git_helper')
+
 
 def get_git_config():
     """
@@ -79,16 +85,15 @@ def fetch_from_repo(repo_url: str, target_path: str, sparse_path: str,
         FileExistsError: If target_path already exists.
         subprocess.CalledProcessError: If git commands fail.
     """
-    print(
-        f"repo_url={repo_url}, target_path={target_path}, sparse_path={sparse_path}, "
-        f"branch={branch}"
-    )
+    log.info('Fetching the Git repository', repo_url=repo_url,
+             target_path=target_path, sparse_path=sparse_path, branch=branch)
 
     # Authenticate URL if credentials are available
     repo_url = authenticate_repo_url(repo_url)
 
     if os.path.exists(target_path):
-        print(f"Removed: {target_path}")
+        log.info('Removed the existing target path',
+                 target_path=target_path)
         shutil.rmtree(target_path)
 
     # Use a temporary directory for git operations to avoid conflicts
@@ -171,7 +176,8 @@ def fetch_from_git_config() -> bool:
     missing_fields = [field for field in required_fields if not config.get(field)]
 
     if missing_fields:
-        print(f"ERROR: Missing required Git configuration: {', '.join(missing_fields)}")
+        log.error('Missing required Git configuration',
+                  missing_fields=', '.join(missing_fields))
         print("Required environment variables:")
         print("  GIT_REPOSITORY_URL - URL of the Git repository")
         print("  GIT_TARGET_PATH - Local directory where files will be fetched")
@@ -183,10 +189,9 @@ def fetch_from_git_config() -> bool:
     sparse_path = config.get('sparse_path', '')
     branch = config.get('branch', 'main')
 
-    print(f"Fetching repository: {repo_url}")
-    print(f"Target path: {target_path}")
-    print(f"Sparse path: {sparse_path or 'all files'}")
-    print(f"Branch: {branch}")
+    log.info('Fetching the Git repository', repo_url=repo_url,
+             target_path=target_path, sparse_path=sparse_path or 'all files',
+             branch=branch)
 
     try:
         # Fetch the repository
@@ -231,7 +236,7 @@ if __name__ == "__main__":
 
         # Check if repository exists before proceeding
         if not check_repo_exists(repo_url):
-            print(f"ERROR: Repository does not exist: {repo_url}")
+            log.error('Repository does not exist', repo_url=repo_url)
             sys.exit(1)
 
         target_path = sys.argv[2]

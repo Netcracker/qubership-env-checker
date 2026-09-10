@@ -10,9 +10,34 @@ set -e
 # The _log function is used for everything this script wants to log. It will
 # always log errors and warnings, but can be silenced for other messages
 # by setting JUPYTER_DOCKER_STACKS_QUIET environment variable.
+#
+# NetCracker: the body now routes through the shared log_json helper so the
+# entrypoint emits NDJSON on stderr like the rest of the image. Only this
+# function changed; every _log call site is upstream's, which keeps the cost of
+# rebasing onto jupyter/docker-stacks unchanged.
+if [ -f /usr/local/bin/log_json.sh ]; then
+    # shellcheck disable=SC1091
+    # shellcheck source=/home/jovyan/shells/log_json.sh
+    source /usr/local/bin/log_json.sh
+fi
 _log() {
     if [[ "$*" == "ERROR:"* ]] || [[ "$*" == "WARNING:"* ]] || [[ "${JUPYTER_DOCKER_STACKS_QUIET}" == "" ]]; then
-        echo "$@"
+        if ! declare -F log_json >/dev/null 2>&1; then
+            echo "$@"
+            return 0
+        fi
+        local level="INFO" message="$*"
+        case "${message}" in
+        "ERROR: "*)
+            level="ERROR"
+            message="${message#ERROR: }"
+            ;;
+        "WARNING: "*)
+            level="WARN"
+            message="${message#WARNING: }"
+            ;;
+        esac
+        log_json "${level}" "${message}" script "${0}"
     fi
 }
 _log "Entered start.sh with args:" "$@"

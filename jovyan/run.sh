@@ -1,5 +1,20 @@
 #!/bin/bash
 
+# Structured logging helper. Every record it writes goes to stderr, because the
+# stdout of this script and of the helpers it captures is a data channel.
+if [ -f /home/jovyan/shells/log_json.sh ]; then
+    # shellcheck disable=SC1091
+    # shellcheck source=/home/jovyan/shells/log_json.sh
+    source /home/jovyan/shells/log_json.sh
+else
+    # Degraded fallback when the helper is not part of the image.
+    log_json() { echo "$@" >&2; }
+    log_debug() { :; }
+    log_info() { log_json INFO "$@"; }
+    log_warn() { log_json WARN "$@"; }
+    log_error() { log_json ERROR "$@"; }
+fi
+
 file_path=""
 outs=()
 
@@ -184,7 +199,7 @@ runSingleNotebook() {
 
     script_path=$1
     if [[ ! -f $script_path ]]; then
-        printf "ERROR: file %s does not exist or invalid\n" "$script_path"
+        log_error "Notebook file does not exist or is invalid" script_path "$script_path"
         overall_result=1
         return 1
     fi
@@ -194,7 +209,7 @@ runSingleNotebook() {
     if [[ -n $2 ]]; then
         params="$2"
     fi
-    echo "Executed with params: $params"
+    log_info "Notebook parameters resolved" params "$params"
 
     if [ -f /home/jovyan/shells/namespace_validator.sh ]; then
         # shellcheck disable=SC1091
@@ -204,22 +219,21 @@ runSingleNotebook() {
         validation=""
     fi
     if [ "$validation" != "" ]; then
-        echo "$validation"
+        log_error "Namespace validation failed" validation_error "$validation"
         overall_result=1
         return 1
     fi
 
     script_name=$(basename -- "$1")
     out_script_name_without_ext=$(get_out_script_name_without_ext "$script_name" "$3")
-    echo "script name: $script_name"
-    echo "out script name without extension: $out_script_name_without_ext"
+    log_info "Notebook resolved" script_name "$script_name" out_script_name "$out_script_name_without_ext"
     out_script_path="$out_path/${out_script_name_without_ext}.ipynb"
 
     if [[ -z $params ]]; then
-        printf "run notebook %s\n" "$script_path"
+        log_info "Running notebook" script_path "$script_path"
         papermill "$script_path" -y "result_file_path: $out_script_name_without_ext" -y "out_path: $out_path" "$out_script_path"
     else
-        printf "run notebook %s with params: \n" "$script_path"
+        log_info "Running notebook with parameters" script_path "$script_path" params "$params"
         papermill "$script_path" -y "$params" -y "result_file_path: $out_script_name_without_ext" -y "out_path: $out_path" "$out_script_path"
     fi
 
@@ -262,11 +276,11 @@ runSingleNotebook() {
 reportToPdf() {
     if $pdf_reporting_enabled; then
         if printf '%s\n' "${reports[@]}" | grep -Fqw 'pdf'; then
-            echo "report to $1.pdf"
+            log_info "Generating PDF report" report_name "$1"
             jupyter nbconvert --to pdf "$out_path/$1"
             outs+=("$out_path/$1.pdf")
         else
-            echo "report to pdf is disabled"
+            log_info "PDF reporting is disabled"
         fi
     fi
 }
@@ -332,11 +346,11 @@ while getopts ":p:y:j:r:e:o:-:" opt; do
         git=*)
             # DEPRECATED: Backward compatibility - old format --git=URL
             if [[ $(cat /etc/cloud-passport/PRODUCTION_MODE 2>/dev/null) == true ]]; then
-                echo "ERROR. '--git=URL' flag is not available for PRODUCTION_MODE=true"
+                log_error "--git=URL is not allowed in production mode" production_mode "true"
                 exit 1
             fi
             git_source="${OPTARG#git=}"
-            echo "WARNING: --git=URL format is DEPRECATED. Please use --git flag with GIT_* environment variables instead."
+            log_warn "--git=URL is deprecated; use --git with GIT_* environment variables"
             ;;
         *)
             # Handling other flags
@@ -363,22 +377,22 @@ ${OPTARG/'='/': '}"
     e)
         execute_pass=${OPTARG}
         execute_pass=${execute_pass//,/ } #replacement for env-checker-job for case when value for -e flag will be separated by ','
-        echo "execute_pass: $execute_pass"
+        log_info "Execute script resolved" execute_pass "$execute_pass"
         executed_command="python $execute_pass"
         prepared_yaml=$(eval "$executed_command")
-        echo "prepared yaml from -e flag: $prepared_yaml"
+        log_info "Prepared YAML from the -e flag" prepared_yaml "$prepared_yaml"
         ;;
     y)
         yaml_config=${OPTARG}
-        echo "yaml config: $yaml_config"
+        log_info "YAML configuration received" yaml_config "$yaml_config"
         ;;
     j)
         json_config=${OPTARG}
-        echo "json config: $json_config"
+        log_info "JSON configuration received" json_config "$json_config"
         ;;
     o)
         output_subfolder=${OPTARG}
-        echo "output_subfolder: $output_subfolder"
+        log_info "Output subfolder set" output_subfolder "$output_subfolder"
         ;;
     r)
         DEFAULT_IFS=$IFS
@@ -386,15 +400,15 @@ ${OPTARG/'='/': '}"
         read -ra reports <<<"${OPTARG}"
         IFS=$DEFAULT_IFS
         if [ ${#reports[@]} -gt 0 ]; then
-            echo "${reports[@]}"
+            log_info "Report targets enabled" reports "${reports[*]}"
         fi
         ;;
     :)
-        echo "Option -$OPTARG requires an argument." >&2
+        log_error "Option requires an argument" option "$OPTARG"
         exit 0
         ;;
     ?)
-        echo -e "Unrecognized option, OPTARG: $OPTARG"
+        log_error "Unrecognized option" option "$OPTARG"
         exit 0
         ;;
     esac
@@ -414,7 +428,7 @@ if [[ -n $git_source ]]; then
         # Keep relative path as in original implementation for backward compatibility
         file_path="$relative_path/${*:$OPTIND:1}"
     else
-        printf "ERROR: git_helper.sh not found. Cannot use deprecated --git=URL format.\n"
+        log_error "git_helper.sh not found; the deprecated --git=URL format is unavailable" path "/home/jovyan/shells/git_helper.sh"
         overall_result=1
         exit 1
     fi
@@ -432,16 +446,16 @@ fi
 # Handle Git mode first - fetch repository (NEW METHOD - uses environment variables)
 if [[ $git_mode == true ]]; then
     prepareOutput
-    echo "Git mode enabled - fetching repository first"
+    log_info "Git mode enabled"
 
     # Fetch repository using git_helper.py (validation happens inside Python script)
-    echo "Fetching from Git repository..."
+    log_info "Fetching from the Git repository"
     if ! python /home/jovyan/utils/integration/git_helper.py; then
-        printf "ERROR: Git fetch failed\n"
+        log_error "Git fetch failed"
         overall_result=1
         exit 1
     else
-        echo "Git fetch completed successfully"
+        log_info "Git fetch completed"
     fi
 fi
 
@@ -465,11 +479,11 @@ elif [[ $file_path == *.yaml || $file_path == *.yml ]]; then
     prepareOutput
     runComposite "$file_path"
 else
-    printf "ERROR: file %s is not exist or invalid" "$file_path"
+    log_error "Input file does not exist or is invalid" file_path "$file_path"
     overall_result=1
 fi
 
-echo "overall_result: $overall_result"
+log_info "Run finished" overall_result "$overall_result"
 txt_result_file_path="$out_path/result.txt"
 echo "$overall_result" >>"$txt_result_file_path"
 
