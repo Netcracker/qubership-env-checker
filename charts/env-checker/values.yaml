@@ -7,6 +7,10 @@ serviceAccount:
 # kubernetes secret name. Only pods which provide own keys can access the private registry.
 imagePullSecrets: []
 
+# Target platform: KUBERNETES or OPENSHIFT. On KUBERNETES the pods run as UID/GID 1000 (the image's jovyan user);
+# on any other value no UID is requested, so OpenShift assigns one from the namespace range.
+PAAS_PLATFORM: KUBERNETES
+
 # Defines microservice name
 SERVICE_NAME: "env-checker"
 APPLICATION_NAME: "env-checker"
@@ -22,7 +26,14 @@ DEPLOYMENT_SESSION_ID: ''
 CLOUD_NAME: 'qubership'
 CSE_CLOUD: ''
 CSE_TENANT: ''
-READONLY_CONTAINER_FILE_SYSTEM_ENABLED: false
+# Non-production only: set to false to make the env-checker root filesystem writable, for example to install packages
+# into /opt/conda from a notebook. Ignored when PRODUCTION_MODE is true; production containers are always read-only.
+READONLY_CONTAINER_FILE_SYSTEM_ENABLED: true
+# Ephemeral home volume (/home/jovyan): image files and Jupyter runtime data take under 1Mi; the rest is the cloned
+# notebook repository and files created in the UI. The pod is evicted when usage exceeds the limit.
+HOME_VOLUME_SIZE_LIMIT: 512Mi
+# Results of the last run.sh invocation (/home/jovyan/out); run.sh clears it on every start.
+OUTPUT_VOLUME_SIZE_LIMIT: 100Mi
 # Jupyter lab access token value
 # ENVIRONMENT_CHECKER_UI_ACCESS_TOKEN: ''
 

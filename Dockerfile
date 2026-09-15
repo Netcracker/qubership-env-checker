@@ -355,3 +355,13 @@ COPY --chown=${NB_UID}:${NB_GID} installation/Rprofile.site /opt/conda/lib/R/etc
 
 # Disable notifications for JupyterLab update notifications
 RUN jupyter labextension disable "@jupyterlab/apputils-extension:announcements"
+
+# Preserve the image-provided home files for the writable runtime home volume.
+# Group root and world-readable so an arbitrary UID with GID 0 (OpenShift, runAsUser without runAsGroup) can copy it.
+USER root
+RUN mkdir -p /opt/env-checker/home-template && \
+    cp -a "/home/${NB_USER}/." /opt/env-checker/home-template/ && \
+    chown -R "${NB_UID}:0" /opt/env-checker/home-template && \
+    chmod -R g+rwX,o+rX /opt/env-checker/home-template
+
+USER ${NB_UID}
