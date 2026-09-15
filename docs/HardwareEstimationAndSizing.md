@@ -28,3 +28,20 @@ Total RAM limit for prod profile: **6144Mi**
 
 Total CPU request for prod profile: **300m**
 Total CPU limit for prod profile: **3000m** (in fact, JOB will be completed soon, hence 2000m is max consumption in runtime)
+
+## Ephemeral storage
+
+Container root filesystems are read-only (always in production mode, by default otherwise). Each pod mounts three
+`emptyDir` volumes; their `sizeLimit` counts toward the node's ephemeral storage, and the kubelet evicts the pod when a
+volume exceeds its limit.
+
+| Mount path         | Value                       | Default | What is stored                                                                                                  |
+| ------------------ | --------------------------- | ------- | --------------------------------------------------------------------------------------------------------------- |
+| `/home/jovyan`     | `HOME_VOLUME_SIZE_LIMIT`    | 512Mi   | Image files and Jupyter runtime data (under 1Mi measured), the cloned notebook repository, files created in the UI |
+| `/home/jovyan/out` | `OUTPUT_VOLUME_SIZE_LIMIT`  | 100Mi   | Results of the last `run.sh` invocation; `run.sh` clears the directory on every start                            |
+| `/tmp`             | fixed                       | 100Mi   | Temporary files of `nbconvert`, `git`, and Python                                                                |
+
+Size `HOME_VOLUME_SIZE_LIMIT` from the notebook repository: for the `GIT_*` integration, the sparse checkout size;
+for the deprecated `git_helper.sh`, the full clone including history. Add headroom for files users create in the UI
+and for `pip install --user`, which lands in `/home/jovyan/.local` because `/opt/conda` is read-only. Job and CronJob
+pods need only the repository size.
