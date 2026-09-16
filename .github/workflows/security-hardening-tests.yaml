@@ -1,0 +1,76 @@
+---
+# Checks that the Helm chart renders the required security context for every workload and that the image runs under
+# a read-only root filesystem with the chart's UID strategies. See docs/InstallationGuide.md, "Read-only root filesystem".
+
+name: "CI: Security Hardening Tests"
+run-name: "Ref: ${{ github.ref_name }}. On ${{ github.event_name }}"
+
+on:
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - 'charts/**'
+      - 'installation/**'
+      - 'jovyan/**'
+      - 'tests/image/**'
+      - '.github/workflows/security-hardening-tests.yaml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'Dockerfile'
+      - 'charts/**'
+      - 'installation/**'
+      - 'jovyan/**'
+      - 'tests/image/**'
+      - '.github/workflows/security-hardening-tests.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  chart:
+    name: "Helm chart security context"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Lint chart
+        run: helm lint charts/env-checker
+
+      - name: Render and assert security context
+        run: bash charts/env-checker/tests/security_hardening_test.sh
+
+  image:
+    name: "Image under read-only root filesystem"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Build image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: env-checker:hardening-test
+          provenance: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDPLATFORM=linux/amd64
+
+      - name: Run read-only root filesystem checks
+        run: bash tests/image/readonly_rootfs_test.sh env-checker:hardening-test

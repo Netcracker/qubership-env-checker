@@ -213,9 +213,10 @@ ERROR: Container must not be started as root. Start with a non-root user (e.g., 
 **Root cause:**
 
 The image's entry point `start.sh` refuses to run as UID 0 and exits 1. This is deliberate: the chart's security context
-sets `runAsUser: 10001` and `runAsNonRoot: true`. The error appears when the pod is scheduled without that security
-context, for example after overriding `securityContext` in custom values or running the image directly with `docker run`
-as root.
+sets `runAsNonRoot: true`, and requests `runAsUser: 1000` when `PAAS_PLATFORM` is `KUBERNETES` (the default). On any
+other value the chart requests no UID, so OpenShift assigns one from the namespace range. The error appears when the pod
+is scheduled without that security context, for example after overriding `securityContext` in custom values or running
+the image directly with `docker run` as root.
 
 **How to check:**
 
@@ -230,9 +231,9 @@ as root.
 
 **How to fix:**
 
-1. Restore a non-root security context in the Helm values so the pod runs as UID 10001, then reapply the release. Do not
-   override the chart's `securityContext` with `runAsUser: 0`.
-2. When running the image outside Kubernetes, pass `--user 10001:10001` (or the image's `NB_UID:NB_GID`).
+1. Restore the chart's non-root security context in the Helm values, then reapply the release. Do not override the
+   chart's `securityContext` with `runAsUser: 0`.
+2. When running the image outside Kubernetes, pass `--user 1000:100` (the image's `NB_UID:NB_GID`).
 
 **Sources:**
 
@@ -291,6 +292,67 @@ disabled, not degraded, when these are empty.
 
 * Source code: `charts/env-checker/templates/_templates.yaml:2-25` (pod env block),
   `charts/env-checker/templates/CloudPassportSecret.yaml`, `jovyan/utils/env_checker_utils.py:16-26`.
+
+### Package install from a notebook fails or warns: "Read-only file system"
+
+**Symptoms:**
+
+* `!pip install <package>` in a notebook prints `Defaulting to user installation because normal site-packages is not
+  writeable` and then succeeds; the package disappears after the pod restarts.
+* `!mamba install <package>` or `!conda install <package>` fails with:
+
+```text
+critical libmamba filesystem error: last_write_time: Read-only file system [/opt/conda/conda-meta/history]
+```
+
+* `!mamba create -p ~/envs/<name> <package>` prints an error and then succeeds:
+
+```text
+error    libmamba Could not create directory '/opt/conda/pkgs': Read-only file system
+```
+
+**Root cause:**
+
+The container runs with `readOnlyRootFilesystem: true` (always in production mode, by default in non-production mode),
+so the base environment in `/opt/conda` cannot be changed at runtime. `pip` handles this by installing into the user
+site in `/home/jovyan/.local`, which is a writable `emptyDir`. `mamba install` targets the base environment and has no
+fallback. `mamba create` tries the first entry of `pkgs_dirs` (`/opt/conda/pkgs`), logs the failure, and continues with
+the second entry, `/home/jovyan/.conda/pkgs`; the error line is noise.
+
+**How to check:**
+
+1. Confirm the security context of the running pod:
+
+   ```bash
+   kubectl get pod -l app.kubernetes.io/name=env-checker -n env-checker \
+     -o jsonpath='{.items[0].spec.containers[0].securityContext.readOnlyRootFilesystem}{"\n"}'
+   ```
+
+   The expected output is `true`.
+
+2. Confirm that conda falls back to the home directory:
+
+   ```bash
+   kubectl exec deploy/env-checker -n env-checker -- conda config --show pkgs_dirs envs_dirs
+   ```
+
+   Both lists contain a path under `/home/jovyan/.conda`.
+
+**How to fix:**
+
+1. For a permanent dependency, add the package to the `Dockerfile` (the `mamba install` block) and rebuild the image.
+2. For a one-off experiment, use `pip install <package>` or a virtual environment; both work until the pod is deleted.
+   See `docs/InstallationGuide.md` (Installing packages at runtime).
+3. For a conda-only package, use `mamba create -p ~/envs/<name> <package>` and ignore the `/opt/conda/pkgs` error line.
+   Raise `HOME_VOLUME_SIZE_LIMIT`: the package cache alone takes about 200Mi.
+4. In non-production mode only, deploy with `READONLY_CONTAINER_FILE_SYSTEM_ENABLED: false` to make `/opt/conda`
+   writable again. Production mode ignores the value.
+
+**Sources:**
+
+* Source code: `charts/env-checker/templates/_templates.yaml` (`envchecker.readOnlyRootFilesystem`,
+  `envchecker.pod.volumes`).
+* Documentation: `docs/InstallationGuide.md` (Read-only root filesystem).
 
 ## Report storage (S3)
 

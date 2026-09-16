@@ -46,6 +46,14 @@ spec:
       labels:
         k8s-app: oauth2-proxy
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+        {{- if eq (default "" .Values.PAAS_PLATFORM) "KUBERNETES" }}
+        runAsUser: 1000
+        runAsGroup: 1000
+        {{- end }}
       containers:
         - args:
             - --cookie-domain=.{{ .Values.CLOUD_PUBLIC_HOST }}
@@ -66,9 +74,21 @@ spec:
           image: quay.io/oauth2-proxy/oauth2-proxy:latest
           imagePullPolicy: Always
           name: oauth2-proxy
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 8080
               protocol: TCP
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 100Mi
 ---
 apiVersion: v1
 kind: Service
