@@ -35,11 +35,11 @@ Container root filesystems are read-only (always in production mode, by default 
 `emptyDir` volumes; their `sizeLimit` counts toward the node's ephemeral storage, and the kubelet evicts the pod when a
 volume exceeds its limit.
 
-| Mount path         | Value                       | Default | What is stored                                                                                                  |
-| ------------------ | --------------------------- | ------- | --------------------------------------------------------------------------------------------------------------- |
-| `/home/jovyan`     | `HOME_VOLUME_SIZE_LIMIT`    | 512Mi   | Image files and Jupyter runtime data (under 1Mi measured), the cloned notebook repository, files created in the UI |
-| `/home/jovyan/out` | `OUTPUT_VOLUME_SIZE_LIMIT`  | 100Mi   | Results of the last `run.sh` invocation; `run.sh` clears the directory on every start                            |
-| `/tmp`             | fixed                       | 100Mi   | Temporary files of `nbconvert`, `git`, and Python                                                                |
+| Mount path         | Value                      | Default | What is stored                                                                                                     |
+| ------------------ | -------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
+| `/home/jovyan`     | `HOME_VOLUME_SIZE_LIMIT`   | 512Mi   | Image files and Jupyter runtime data (under 1Mi measured), the cloned notebook repository, files created in the UI |
+| `/home/jovyan/out` | `OUTPUT_VOLUME_SIZE_LIMIT` | 100Mi   | Results of the last `run.sh` invocation; `run.sh` clears the directory on every start                              |
+| `/tmp`             | fixed                      | 100Mi   | Temporary files of `nbconvert`, `git`, and Python                                                                  |
 
 Size `HOME_VOLUME_SIZE_LIMIT` from the notebook repository: for the `GIT_*` integration, the sparse checkout size;
 for the deprecated `git_helper.sh`, the full clone including history. Add headroom for files users create in the UI

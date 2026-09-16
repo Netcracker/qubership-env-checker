@@ -65,7 +65,7 @@ prepareOutput() {
 
     if [ -d "/home/jovyan/out" ]; then
         find /home/jovyan/out -mindepth 1 -type d -empty -delete # delete all empty catalogs in './out' folder (but not the mountpoint itself)
-        find /home/jovyan/out -maxdepth 1 -type f -delete # delete all files in './out' folder (except for non-empty subfolders)
+        find /home/jovyan/out -maxdepth 1 -type f -delete        # delete all files in './out' folder (except for non-empty subfolders)
         if [ -f /home/jovyan/shells/remove_out_catalogs.sh ]; then
             # shellcheck disable=SC1091
             # shellcheck source=/home/jovyan/shells/remove_out_catalogs.sh
