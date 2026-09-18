@@ -45,10 +45,14 @@ jobs:
           chart=false
           while IFS= read -r file; do
             case "${file}" in
-              Dockerfile|.qubership/docker.cfg|installation/*|jovyan/*|.github/workflows/env-checker-ci.yaml)
+              Dockerfile|.qubership/docker.cfg|installation/*|jovyan/*)
                 container=true
                 ;;
-              charts/*|.kubeconform.yaml|.github/workflows/env-checker-ci.yaml)
+              charts/*|.kubeconform.yaml)
+                chart=true
+                ;;
+              .github/workflows/env-checker-ci.yaml)
+                container=true
                 chart=true
                 ;;
             esac
