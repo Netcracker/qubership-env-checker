@@ -19,8 +19,13 @@ import logging
 import os
 import stat
 import subprocess
+import sys
 
 from jupyter_core.paths import jupyter_data_dir
+
+# The shared NDJSON formatter ships with the check runner, not with Jupyter.
+sys.path.append("/home/jovyan/utils")
+import structured_log  # noqa: E402
 
 c = get_config()  # noqa: F821
 c.ServerApp.ip = "0.0.0.0"
@@ -31,8 +36,28 @@ c.NotebookApp.allow_root = True
 # c.NotebookApp.ip = 'localhost'
 c.NotebookApp.port = 8888
 c.NotebookApp.trust_xheaders = True
-c.NotebookApp.log_level = logging.DEBUG
-c.Application.log_level = logging.DEBUG
+# The level follows ENVIRONMENT_CHECKER_LOG_LEVEL, which the Helm chart sets.
+# It used to be pinned to DEBUG here, which both drowned the log and printed
+# request paths and tokens in a production image.
+_LOG_LEVEL = structured_log.resolve_level()
+c.NotebookApp.log_level = _LOG_LEVEL
+c.Application.log_level = _LOG_LEVEL
+
+# Emit NDJSON on stderr: one JSON object per line with time, level and message.
+# ENVIRONMENT_CHECKER_LOG_FORMAT=text selects the legacy text format instead.
+c.Application.logging_config = structured_log.logging_config(
+    "ServerApp", "NotebookApp", "tornado.access", "tornado.application",
+    "tornado.general",
+)
+# traitlets installs its own handler after this file is read, so re-apply the
+# formatter over the loggers the dictConfig above already covers.
+try:
+    structured_log.install_on(
+        "ServerApp", "NotebookApp", "tornado.access", "tornado.application",
+        "tornado.general",
+    )
+except Exception:  # never let logging setup stop the server from booting
+    logging.exception("Could not install the structured log formatter")
 # to output both image/svg+xml and application/pdf plot formats in the notebook file
 c.InlineBackend.figure_formats = {"png", "jpeg", "svg", "pdf"}
 # https://github.com/jupyter/notebook/issues/3130
