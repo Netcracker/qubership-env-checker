@@ -4,6 +4,9 @@ import sys
 import json
 import os
 import pandas as pd
+import structured_log
+
+log = structured_log.get_logger('json_report_generator')
 
 
 def generate_report_table(report):
@@ -18,7 +21,8 @@ def generate_report_table(report):
         df = df.drop(columns=["checks"])
         return df
     else:
-        print("No data to generate")
+        log.warning('No report data to generate',
+                    report_name=report.get('name'))
         data = {'Value': ['No data']}
         return pd.DataFrame(data)
 
@@ -65,7 +69,8 @@ def process_notebook_file(notebook_files, reports):
         output_file = os.path.join(output_dir, f"{report_name}.json")
         with open(output_file, "w") as file:
             json.dump({report_name: report_entries}, file, indent=4)
-        print(f"JSON report saved to {output_file}")
+        log.info('JSON report saved', output_file=output_file,
+                 report_name=report_name)
 
 
 directory_path = sys.argv[1]
@@ -80,4 +85,4 @@ for root, _, files in os.walk(directory_path):
             notebooks.append(os.path.join(root, file))
     process_notebook_file(notebooks, reports)
 
-print("All reports generated")
+log.info('All reports generated', directory=directory_path)
