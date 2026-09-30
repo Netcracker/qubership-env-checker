@@ -7,6 +7,12 @@
 
 set -e
 
+# Populate the writable home volume without replacing files created by earlier container starts.
+# No -a: the emptyDir is root-owned, so preserving times or mode on /home/jovyan itself fails with EPERM.
+if [[ -d /opt/env-checker/home-template ]]; then
+    cp -r --no-clobber /opt/env-checker/home-template/. /home/jovyan/
+fi
+
 # The _log function is used for everything this script wants to log. It will
 # always log errors and warnings, but can be silenced for other messages
 # by setting JUPYTER_DOCKER_STACKS_QUIET environment variable.

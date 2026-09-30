@@ -39,7 +39,7 @@ The env-checker supports two operational modes:
 ## Requirements
 
 | Component  | Requirement | Version |
-|------------|-------------|---------|
+| ---------- | ----------- | ------- |
 | Kubernetes | Mandatory   | 1.21+   |
 | Helm       | Mandatory   | 3.0+    |
 | Docker     | Optional    | 20.0+   |
@@ -103,15 +103,16 @@ kubectl port-forward svc/env-checker 8888:8888 -n env-checker
 
 ## Configuration
 
-| Parameter | Mode | Mandatory | Default | Description |
-|-----------|------|-----------|---------|-------------|
-| `PRODUCTION_MODE` | Both | No | `false` | Controls deployment mode |
-| `CLOUD_PUBLIC_HOST` | Non-Prod | No | `qubership` | Public host for Ingress (set real domain if using Ingress) |
-| `OPS_IDP_URL` | Non-Prod | No | - | Keycloak URL (enables OAuth2) |
-| `ENVCHECKER_KEYCLOACK_*` | Non-Prod | No | - | Keycloak credentials (required if OAuth2 enabled) |
-| `ENVIRONMENT_CHECKER_UI_ACCESS_TOKEN` | Non-Prod | No | *auto* | UI access token |
-| `ENVIRONMENT_CHECKER_JOB_COMMAND` | Prod | Yes | - | Job execution command |
-| `ENVIRONMENT_CHECKER_CRON_*` | Prod | No | - | CronJob settings |
+| Parameter                                | Mode     | Mandatory | Default     | Description                                                                            |
+| ---------------------------------------- | -------- | --------- | ----------- | -------------------------------------------------------------------------------------- |
+| `PRODUCTION_MODE`                        | Both     | No        | `false`     | Controls deployment mode                                                               |
+| `CLOUD_PUBLIC_HOST`                      | Non-Prod | No        | `qubership` | Public host for Ingress (set real domain if using Ingress)                             |
+| `OPS_IDP_URL`                            | Non-Prod | No        | -           | Keycloak URL (enables OAuth2)                                                          |
+| `ENVCHECKER_KEYCLOACK_*`                 | Non-Prod | No        | -           | Keycloak credentials (required if OAuth2 enabled)                                      |
+| `ENVIRONMENT_CHECKER_UI_ACCESS_TOKEN`    | Non-Prod | No        | *auto*      | UI access token                                                                        |
+| `READONLY_CONTAINER_FILE_SYSTEM_ENABLED` | Non-Prod | No        | `true`      | `false` makes the env-checker root filesystem writable; production is always read-only |
+| `ENVIRONMENT_CHECKER_JOB_COMMAND`        | Prod     | Yes       | -           | Job execution command                                                                  |
+| `ENVIRONMENT_CHECKER_CRON_*`             | Prod     | No        | -           | CronJob settings                                                                       |
 
 > **Note**: Namespace is set via `--namespace`, not `--set NAMESPACE`
 
@@ -120,9 +121,14 @@ kubectl port-forward svc/env-checker 8888:8888 -n env-checker
 For OpenShift deployments, set:
 
 ```yaml
+PAAS_PLATFORM: OPENSHIFT
 CHOWN_HOME: "yes"
 CHOWN_HOME_OPTS: "-R"
 ```
+
+With `PAAS_PLATFORM: OPENSHIFT` the chart requests no `runAsUser`, so the security context constraints assign a UID from
+the namespace range. The image supports an arbitrary UID: its files are group-`root` and world-readable, and every
+writable path is a volume.
 
 See the complete parameter reference in the [Installation Guide](docs/InstallationGuide.md).
 

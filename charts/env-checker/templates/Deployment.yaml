@@ -60,7 +60,13 @@ spec:
       {{- end }}
       automountServiceAccountToken: {{ .Values.serviceAccount.automountToken }}
       securityContext:
-        runAsUser: 10001
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+        {{- if eq (default "" .Values.PAAS_PLATFORM) "KUBERNETES" }}
+        runAsUser: 1000
+        runAsGroup: 1000
+        {{- end }}
       containers:
         - name: '{{ .Values.SERVICE_NAME }}'
           image: {{ template "env-checker.image" . }}
@@ -97,14 +103,10 @@ spec:
             periodSeconds: 20
             timeoutSeconds: 5
           securityContext:
-            readOnlyRootFilesystem: {{ .Values.READONLY_CONTAINER_FILE_SYSTEM_ENABLED }}
-            runAsNonRoot: true
-            seccompProfile:
-              type: RuntimeDefault
+            readOnlyRootFilesystem: {{ include "envchecker.readOnlyRootFilesystem" . }}
             allowPrivilegeEscalation: false
             capabilities:
-              drop:
-                - ALL
+              drop: ["ALL"]
        {{- include "envchecker.pod.volumes" . | nindent 6 }}
     {{ with .Values.NODE_SELECTOR_LABELS }}
     nodeSelector:

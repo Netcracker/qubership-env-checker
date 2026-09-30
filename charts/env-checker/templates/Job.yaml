@@ -16,15 +16,24 @@ spec:
       serviceAccountName: {{ .Values.serviceAccount.name }}
       automountServiceAccountToken: {{ .Values.serviceAccount.automountToken }}
       securityContext:
-        runAsUser: 10001
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+        {{- if eq (default "" .Values.PAAS_PLATFORM) "KUBERNETES" }}
+        runAsUser: 1000
+        runAsGroup: 1000
+        {{- end }}
       restartPolicy: Never
       containers:
-        - name: '{{ printf "%s-job" .Values.SERVICE }}'
+        - name: '{{ printf "%s-job" .Values.SERVICE_NAME }}'
           image: {{ template "env-checker.image" . }}
           securityContext:
-            runAsNonRoot: true
-            readOnlyRootFilesystem: {{ .Values.READONLY_CONTAINER_FILE_SYSTEM_ENABLED }}
-          command: [ "/bin/sh", "-c", "$(ENVIRONMENT_CHECKER_JOB_COMMAND)" ]
+            readOnlyRootFilesystem: {{ include "envchecker.readOnlyRootFilesystem" . }}
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          # Run through the image entrypoint so start.sh populates the /home/jovyan emptyDir before the command starts.
+          command: [ "tini", "-g", "--", "/usr/local/bin/start.sh", "/bin/sh", "-c", "$(ENVIRONMENT_CHECKER_JOB_COMMAND)" ]
           env:
             - name: "ENVIRONMENT_CHECKER_JOB_COMMAND"
               value: '{{ .Values.ENVIRONMENT_CHECKER_JOB_COMMAND }}'
