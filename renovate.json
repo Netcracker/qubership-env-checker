@@ -5,10 +5,9 @@
     "github>Netcracker/renovate-config:github-actions",
     "github>Netcracker/renovate-config:netcracker-dependencies",
     "github>Netcracker/renovate-config:annotated-versions",
-    ":enablePreCommit"
+    ":enablePreCommit",
+    "github>Netcracker/renovate-config:automerge"
   ],
-  "automerge": true,
-  "platformAutomerge": false,
   "packageRules": [
     {
       "matchManagers": ["dockerfile"],

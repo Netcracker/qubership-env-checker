@@ -1,6 +1,6 @@
 ARG BUILDPLATFORM
 
-FROM --platform=$BUILDPLATFORM debian:trixie-slim@sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc4017c709b6259bc132
+FROM --platform=$BUILDPLATFORM debian:trixie-slim@sha256:a99cfc517144bc59b1978475ec53b46ecabec7e43635402ee5b77cc54cd1b20a
 
 # CORE versions (managed by Renovate)
 # renovate: datasource=conda depName=python
@@ -12,7 +12,7 @@ ARG KUBECTL_VERSION=v1.37.0
 # renovate: datasource=github-releases depName=mikefarah/yq
 ARG YQ_VERSION=v4.53.6
 # renovate: datasource=conda depName=nodejs
-ARG NODEJS_VERSION=26.6.0
+ARG NODEJS_VERSION=26.8.2
 # renovate: datasource=conda depName=jupyterlab
 ARG JUPYTERLAB_VERSION=4.6.3
 # renovate: datasource=conda depName=jupyterlab-lsp
