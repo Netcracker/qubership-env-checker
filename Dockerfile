@@ -8,7 +8,7 @@ ARG PYTHON_VERSION=3.14.7
 # renovate: datasource=github-releases depName=mamba-org/micromamba-releases
 ARG MICROMAMBA_VERSION=2.0.4-0
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
-ARG KUBECTL_VERSION=v1.37.0
+ARG KUBECTL_VERSION=v1.37.1
 # renovate: datasource=github-releases depName=mikefarah/yq
 ARG YQ_VERSION=v4.53.6
 # renovate: datasource=conda depName=nodejs
