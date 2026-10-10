@@ -1,5 +1,6 @@
 import sys
 import os
+import re
 import subprocess
 import shutil
 import requests
@@ -39,6 +40,27 @@ def check_repo_exists(repo_url: str) -> bool:
     except Exception:
         # If request fails, assume repository exists and let git handle it
         return True
+
+
+# Matches the "user:password@" part of any URL, so credentials embedded in a
+# remote URL never reach the log.
+_URL_CREDENTIALS_RE = re.compile(r"(?<=://)[^/\s@]+:[^/\s@]+@")
+
+
+def redact_credentials(text: str) -> str:
+    """
+    Remove credentials embedded in any URL inside the given text.
+
+    Git commands run with an authenticated remote URL, so a failure message
+    would otherwise carry GIT_USERNAME and GIT_TOKEN in clear text.
+
+    Args:
+        text (str): Arbitrary text, typically a stringified exception.
+
+    Returns:
+        str: The same text with every "user:password@" sequence replaced.
+    """
+    return _URL_CREDENTIALS_RE.sub("***:***@", text)
 
 
 def authenticate_repo_url(repo_url: str) -> str:
@@ -194,7 +216,7 @@ def fetch_from_git_config() -> bool:
         return success
 
     except Exception as e:
-        print(f"ERROR: Failed to fetch repository: {e}")
+        print(f"ERROR: Failed to fetch repository: {redact_credentials(str(e))}")
         return False
 
 
@@ -215,7 +237,7 @@ def run_fetch(repo_url: str, target_path: str, sparse_path: str,
     try:
         return fetch_from_repo(repo_url, target_path, sparse_path, branch)
     except Exception as e:
-        print(f"ERROR: Failed to fetch repository: {e}")
+        print(f"ERROR: Failed to fetch repository: {redact_credentials(str(e))}")
         return False
 
 
