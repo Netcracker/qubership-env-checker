@@ -4,17 +4,21 @@ import pandas as pd
 import scrapbook as sb
 from bs4 import BeautifulSoup
 import sys
+import structured_log
+
+log = structured_log.get_logger('report_generator')
 style = """
 <style>
 .tooltip { position: relative }
-.tooltip .tooltiptext { visibility: hidden; position: absolute; text-align: center; background-color: Black; color: White; z-index: 1; bottom: 100%; }
+.tooltip .tooltiptext { visibility: hidden; position: absolute;
+    text-align: center; background-color: Black; color: White;
+    z-index: 1; bottom: 100%; }
 .tooltip:hover .tooltiptext { visibility: visible; }
 table, th, td { border:1px solid black; text-align: center }
 </style> """
 
 
 def generate_report_table(report):
-    global flag
     data = report["values"]
     if data != []:
         df = pd.DataFrame(data)
@@ -26,13 +30,13 @@ def generate_report_table(report):
         df = df.drop(columns=["checks"])
         return df
     else:
-        print("No data to generate")
+        log.warning('No report data to generate',
+                    report_name=report.get('name'))
         data = {'Value': ['No data']}
         return pd.DataFrame(data)
 
 
 def add_style_block(html):
-    global style
     html = html + style
     soup = BeautifulSoup(html, 'html.parser')
 
@@ -72,7 +76,11 @@ def process_notebook_file(notebook_files, reports):
             if hash_code not in hashes[report_name]:
                 hashes[report_name][hash_code] = set()
             if nb.scraps.data_dict["report"]["isExceptionOccured"]:
-                hashes[report_name][hash_code].add(notebook + " <p style=\"display:inline;color:red;font-size:20px;\">Timeout Exception</p> ")
+                hashes[report_name][hash_code].add(
+                    notebook
+                    + " <p style=\"display:inline;color:red;"
+                    + "font-size:20px;\">Timeout Exception</p> "
+                )
             else:
                 hashes[report_name][hash_code].add(notebook)
             if report_name not in reports:
@@ -95,15 +103,15 @@ def process_notebook_file(notebook_files, reports):
 
     for report, dir in report_file.items():
         with open(dir, 'a') as file:
-            datas = []
+            html_blocks = []
             for hash_cd in reports[report]:
                 df = reports[report][hash_cd].map(
                     add_br_after_error_none_ok)
-                datas.append("<br>".join([f"<b>{element}</b>" for element in
-                                          hashes[report][
-                                              hash_cd]]) + df.to_html(
+                html_blocks.append("<br>".join([
+                    f"<b>{element}</b>" for element in
+                    hashes[report][hash_cd]]) + df.to_html(
                     index=False, escape=False))
-            file.write(add_style_block('<br><br>'.join(datas)))
+            file.write(add_style_block('<br><br>'.join(html_blocks)))
 
 
 directory_path = sys.argv[1]
@@ -118,4 +126,4 @@ for root, _, files in os.walk(directory_path):
             notebooks.append(os.path.join(root, file))
     process_notebook_file(notebooks, reports)
 
-print("All reports generated")
+log.info('All reports generated', directory=directory_path)
