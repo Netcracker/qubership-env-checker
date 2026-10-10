@@ -4,13 +4,15 @@ import os.path
 import datetime
 import zipfile
 from io import BytesIO
-import colorize_text
 import requests
 import yaml
 import re
 import scrapbook as sb
 import json
 import ast
+import structured_log
+
+log = structured_log.get_logger('env_checker_utils')
 
 
 def get_env_variable_value_by_name(variable_name):
@@ -88,7 +90,7 @@ def get_text_content_as_base64(file_path: str) -> str:
 def getCurrentTime() -> str:
     current_time = datetime.datetime.now().isoformat()
     if log_level != 'ERROR' and log_level is not None:
-        print("current_time=" + current_time)
+        log.debug('Current time resolved', current_time=current_time)
     return current_time
 
 
@@ -147,7 +149,7 @@ def get_report_names_by_base_name(report_base_name: str) -> list[str]:
     for filename in os.listdir('out'):
         out_files_list.append(filename)
     if not out_files_list:
-        print('/out directory is empty')
+        log.warning('Output directory is empty', path='out')
         return out_files_list
 
     filtered_files_list = []
@@ -157,10 +159,11 @@ def get_report_names_by_base_name(report_base_name: str) -> list[str]:
             filtered_files_list.append(os.path.join('out', filename))
 
     if not filtered_files_list:
-        print('No reports found in out directory for base name',
-              report_base_name)
+        log.warning('No reports found in the output directory',
+                    report_base_name=report_base_name, path='out')
     elif log_level != 'ERROR' and log_level is not None:
-        print('filtered_files_list= ' + str(filtered_files_list))
+        log.debug('Filtered report files', files=filtered_files_list,
+                  file_count=len(filtered_files_list))
 
     return filtered_files_list
 
@@ -169,15 +172,16 @@ def check_connection_status(url, headers=None, path=''):
     try:
         response = requests.get(url + path, headers=headers, verify=False)
         if response.status_code == 200:
-            print(colorize_text.get_green_text_color(
-                f"Connection to {url + path} is successful"))
+            log.info('Connection check succeeded', url=url + path,
+                     status_code=response.status_code)
             return 1
         else:
-            print(colorize_text.get_red_text_color(
-                f"Connection to {url + path} is not successful"))
+            log.warning('Connection check failed', url=url + path,
+                        status_code=response.status_code)
             return 0
     except Exception as e:
-        print(colorize_text.get_red_text_color(f"An error occurred: {str(e)}"))
+        log.exception('Connection check raised an error', url=url + path,
+                      error=e)
         return 0
 
 
@@ -208,7 +212,9 @@ def get_report_names_from_result_file(
         for check in result['checks']:
             if executed_notebook_path in check['outs']:
                 return check['outs']
-    print(f'Cannot find {executed_notebook_path} in result.yaml')
+    log.warning('Executed notebook not found in the result file',
+                notebook_path=executed_notebook_path,
+                result_file='result.yaml')
 
 
 def load_result_yml(dir: str):
@@ -224,7 +230,8 @@ def load_result_yml(dir: str):
         try:
             return yaml.safe_load(stream)
         except yaml.YAMLError as e:
-            print(f'An error occured while parsing result.yaml: {e}')
+            log.exception('Failed to parse the result file',
+                          result_file=f'{dir}/result.yaml', error=e)
             return
 
 
