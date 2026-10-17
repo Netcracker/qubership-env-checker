@@ -1,9 +1,11 @@
 import json
-import logging
 import jsonschema
 import sys
+import structured_log
 
 from jsonschema import validate
+
+log = structured_log.get_logger('json_schema_validation')
 
 APP_METRICS_SCHEMA = {
     "type": "array",
@@ -45,7 +47,8 @@ def validate_app_metrics_schema_as_dict(metrics: dict) -> bool:
     try:
         validate(instance=metrics, schema=APP_METRICS_SCHEMA)
     except jsonschema.exceptions.ValidationError as e:
-        logging.warning(f'Metrics do not match json schema: {e}')
+        log.warning('Metrics do not match the JSON schema', error=e,
+                    schema='APP_METRICS_SCHEMA')
         return False
     print(0)
     return True
@@ -56,9 +59,10 @@ def validate_app_metrics_schema(metrics_json: str) -> bool:
     try:
         metrics = json.loads(metrics_json)
     except TypeError as e:
-        logging.error(f'json string was excepted, cannot parse non-string json, representing metrics: {e}')
+        log.error('Metrics must be a JSON string', error=e,
+                  received_type=type(metrics_json).__name__)
         sys.exit(1)
     except json.JSONDecodeError as e:
-        logging.error(f'Cannot deserialize metrics json string: {e}')
+        log.error('Cannot deserialize the metrics JSON string', error=e)
         sys.exit(1)
     return validate_app_metrics_schema_as_dict(metrics)
