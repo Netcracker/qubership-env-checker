@@ -20,6 +20,12 @@
         "https://api.anaconda.org/package/conda-forge/",
         "https://prefix.dev/conda-forge/"
       ]
+    },
+    {
+      "description": "conda-forge conda has no cp315 build; latest 26.9.3 is py314. Remove this cap when a py315 build exists.",
+      "matchDatasources": ["conda"],
+      "matchPackageNames": ["python"],
+      "allowedVersions": "<3.15"
     }
   ]
 }
