@@ -1,5 +1,4 @@
 import urllib3
-import logging
 import boto3
 import nb_data_manipulation_utils
 import env_checker_utils
@@ -8,12 +7,15 @@ import traceback
 import sys
 import pytz
 import uuid
+import structured_log
 
 from botocore.exceptions import ClientError
 from botocore.client import Config
 from result import Result, ResultStatus
 from datetime import datetime
 from errorCode import ErrorCode
+
+log = structured_log.get_logger('infra.s3')
 
 log_level = env_checker_utils.get_env_variable_value_by_name('ENVIRONMENT_CHECKER_LOG_LEVEL')
 urllib3.disable_warnings()
@@ -122,7 +124,8 @@ def init_env_checker_bucket():
             s3_client.create_bucket(Bucket=BUCKET_NAME)
             put_lifecycle_config_with_expiration_rule()
         else:
-            print(f'Unexpected error when trying to check S3 bucket existence: {error_code}')
+            log.error('S3 bucket existence check failed',
+                      bucket=BUCKET_NAME, error_code=error_code, error=e)
             sys.exit(1)
 
 
@@ -163,9 +166,13 @@ def uploadReportsByExecutedNotebookPath(executed_notebook_path: str) -> str:
         s3_client.upload_fileobj(zip, BUCKET_NAME, s3_upload_location)
         url = REPORT_FULL_URL_TEMPLATE.format(s3_server_url=S3_URL, bucket_name=BUCKET_NAME,
                                               bucket_to_report_path=s3_upload_location)
-        print(f'{executed_notebook_path} reports are saved in S3: {url}')
+        log.info('Reports uploaded to S3',
+                 notebook_path=executed_notebook_path, url=url,
+                 bucket=BUCKET_NAME)
     except ClientError as e:
-        logging.error(e)
+        log.exception('Failed to upload reports to S3', error=e,
+                      bucket=BUCKET_NAME,
+                      notebook_path=executed_notebook_path)
         return
     nb_data_manipulation_utils.update_s3_link_label_for_notebook_from_result_file(executed_notebook_path)
     return url
@@ -201,10 +208,10 @@ def check_and_update_expiration_rule(bucket_lifecycle_config: dict):
             if configured_exp_days != EXPIRATION_DAYS:
                 rule['Expiration']['Days'] = EXPIRATION_DAYS
                 if log_level == 'DEBUG':
-                    print(
-                        f'Updating S3 bucket expiration days for directory '
-                        f'{EXPIRATION_RULE_PREFIX}: {EXPIRATION_DAYS}'
-                    )
+                    log.debug('Updating the S3 bucket expiration rule',
+                              prefix=EXPIRATION_RULE_PREFIX,
+                              expiration_days=EXPIRATION_DAYS,
+                              bucket=BUCKET_NAME)
                 s3_client.put_bucket_lifecycle_configuration(
                     Bucket=BUCKET_NAME,
                     LifecycleConfiguration=prepare_lifecycle_config_with_rules(bucket_rules)
@@ -212,10 +219,10 @@ def check_and_update_expiration_rule(bucket_lifecycle_config: dict):
             break
     if not rule_already_present:
         if log_level == 'DEBUG':
-            print(
-                f'Add bucket expiration rule for S3 bucket. '
-                f'Expiration days for directory {EXPIRATION_RULE_PREFIX}: {EXPIRATION_DAYS}'
-            )
+            log.debug('Adding the S3 bucket expiration rule',
+                      prefix=EXPIRATION_RULE_PREFIX,
+                      expiration_days=EXPIRATION_DAYS,
+                      bucket=BUCKET_NAME)
         bucket_rules.append(EXPIRATION_RULE)
         s3_client.put_bucket_lifecycle_configuration(
             Bucket=BUCKET_NAME,
@@ -240,8 +247,8 @@ def verify_bucket_expiration_rule_is_set():
         check_and_update_expiration_rule(bucket_lifecycle_config)
     except ClientError:    # lifecycle configuration is not set up yet. Create and put it.
         if log_level == 'DEBUG':
-            print(
-                f'Create lifecycle configuration for bucket. '
-                f'Expiration days for directory {EXPIRATION_RULE_PREFIX}: {EXPIRATION_DAYS}'
-            )
+            log.debug('Creating the S3 bucket lifecycle configuration',
+                      prefix=EXPIRATION_RULE_PREFIX,
+                      expiration_days=EXPIRATION_DAYS,
+                      bucket=BUCKET_NAME)
         put_lifecycle_config_with_expiration_rule()
