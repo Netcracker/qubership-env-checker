@@ -242,6 +242,9 @@ EXPOSE $JUPYTER_PORT
 
 # Copy local files as late as possible to avoid cache busting
 COPY --chmod=0755 installation/shells/start.sh installation/shells/start-notebook.sh /usr/local/bin/
+# The shell logging helper start.sh sources; the same file also ships under
+# /home/jovyan/shells/ for run.sh and git_helper.sh.
+COPY --chmod=0755 jovyan/shells/log_json.sh /usr/local/bin/
 # Currently need to have jupyter_server_config to support jupyterlab
 COPY installation/python/jupyter_server_config.py /etc/jupyter/
 # Copy user's working files (relative path from context)
