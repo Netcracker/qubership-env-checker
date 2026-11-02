@@ -6,6 +6,7 @@ import urllib3
 import env_checker_utils
 import nb_data_manipulation_utils
 import constants
+import structured_log
 
 from NotebookMetrics import NotebookMetrics
 from urllib.parse import urljoin
@@ -16,6 +17,8 @@ from opentelemetry.exporter.prometheus_remote_write import (
 from opentelemetry.sdk.metrics import MeterProvider, ObservableGauge
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
+
+log = structured_log.get_logger('monitoringUtils')
 
 ENVCHECKER_SOLUTION_CORRECTNESS_STATUS = 'envchecker_solution_correctness_status'
 ENVCHECKER_SOLUTION_CORRECTNESS_LAST_RUN = 'envchecker_solution_correctness_last_run'
@@ -47,7 +50,8 @@ class Metric:
 class MonitoringHelper:
     MONITORING_URL = env_checker_utils.get_env_variable_value_by_name('MONITORING_URL')
     if MONITORING_URL is None:
-        print('Cannot determine URL of monitoring system.')
+        log.error('Monitoring URL is not configured',
+                  env_var='MONITORING_URL')
         sys.exit(1)
     MONITORING_USER = env_checker_utils.get_env_variable_value_by_name('MONITORING_USER')
     if MONITORING_USER is None:
