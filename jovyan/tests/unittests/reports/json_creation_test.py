@@ -16,7 +16,8 @@ class TestJsonReport(unittest.TestCase):
         self.assertTrue(report.is_file(), 'The JSON report was not generated')
         self.assertIn('FullChecksReport', json.loads(report.read_text()))
         for line in result.stderr.splitlines():
-            json.loads(line)
+            with self.subTest(stderr_line=line):
+                json.loads(line)
 
 
 if __name__ == '__main__':

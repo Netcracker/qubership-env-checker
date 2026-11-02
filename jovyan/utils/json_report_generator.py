@@ -17,7 +17,7 @@ def generate_report_table(report):
             checks = row.get("checks", {})
             for key, value in checks.items():
                 new_column_name = f"{key}"
-                df.at[index, new_column_name] = value
+                df.loc[index, new_column_name] = value
         df = df.drop(columns=["checks"])
         return df
     else:
