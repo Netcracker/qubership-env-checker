@@ -4,7 +4,7 @@ FROM --platform=$BUILDPLATFORM debian:trixie-slim@sha256:f6b08b09a05725f9431502d
 
 # CORE versions (managed by Renovate)
 # renovate: datasource=conda depName=python
-ARG PYTHON_VERSION=3.14.9
+ARG PYTHON_VERSION=3.14.10
 # renovate: datasource=github-releases depName=mamba-org/micromamba-releases
 ARG MICROMAMBA_VERSION=2.0.4-0
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
