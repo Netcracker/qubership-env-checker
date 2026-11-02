@@ -3,6 +3,7 @@ import json
 import subprocess
 import os
 
+
 class TestHtmlReport(unittest.TestCase):
 
     def test_html_creation(self):
@@ -18,7 +19,10 @@ class TestHtmlReport(unittest.TestCase):
             self.fail("The output directory does not exist.")
 
         html_files = [f for f in os.listdir('/home/jovyan/out/') if f.endswith('.html')]
-        self.assertGreater(len(html_files), 0, "HTML files did not generate in the 'out' directory. Flag '--html=true' did not work")
+        self.assertGreater(
+            len(html_files), 0,
+            "HTML files did not generate in the 'out' directory. Flag '--html=true' did not work")
+
 
 if __name__ == '__main__':
     unittest.main()
