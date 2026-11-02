@@ -10,7 +10,7 @@ for folder in "$out_dir"/*; do
 
         # Checking that the folder was created more than an hour ago
         if [[ $folder_creation_time -lt $threshold_time ]]; then
-            echo "Removing folder: $folder"
+            log_info "Removing expired output folder" folder "$folder"
             rm -rf "$folder" # Removing folder
         fi
     fi

@@ -1,9 +1,9 @@
 import unittest
 import subprocess
-import os
-import shutil
 
 # not ready script
+
+
 class TestS3Integration(unittest.TestCase):
 
     def test_s3_integration(self):
@@ -14,9 +14,15 @@ class TestS3Integration(unittest.TestCase):
         if result.returncode == 1:
             self.fail(f"Error while trying to send result to s3. stdout={result.stdout}, stderr={result.stderr}")
 
-        report_was_created_message = 'reports are saved in S3'
-        if report_was_created_message not in result.stdout:
-            self.fail(f"The result of sending reports to s3 does not contain information about successful sending. result={result}")
+        # The upload is now a structured log record on stderr, not a print.
+        report_was_created_message = 'Reports uploaded to S3'
+        if report_was_created_message not in result.stderr:
+            self.fail(
+                "The result of sending reports to s3 does not contain "
+                "information about successful sending. "
+                f"result={result}"
+            )
+
 
 if __name__ == '__main__':
     unittest.main()
