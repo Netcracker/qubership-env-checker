@@ -10,8 +10,12 @@ on:
       - renovate.json
       - .github/workflows/renovate-config-lint.yaml
   schedule:
-    - cron: "4 8 * * 1"
+    # Choose one stable Monday slot in 06:00-10:59 UTC for this repository.
+    # Avoid reusing this example unchanged across repositories.
+    - cron: "17 8 * * 1"
   workflow_dispatch: {}
+
+permissions: {}
 
 jobs:
   validate-renovate-config:
@@ -84,6 +88,11 @@ jobs:
       GH_REPO: ${{ github.repository }}
       GH_TOKEN: ${{ github.token }}
     steps:
+      - name: Checkout sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
       - name: Inspect Dependency Dashboard and report health
         uses: netcracker/qubership-workflow-hub/actions/renovate-monitor@e6afd0a6bcc4f24d73e3e4d5fb9a31ada009e3f1 # v2.8.2
         with:
