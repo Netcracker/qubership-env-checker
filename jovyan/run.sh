@@ -425,7 +425,11 @@ if [[ -n $git_source ]]; then
         # Calculate relative_path as in original implementation (after source sets global variables)
         relative_path=$(basename -s .git "$git_source")
         # Call gitProcess to clone/pull repository (uses global variables set by source)
-        gitProcess
+        if ! gitProcess; then
+            log_error "Failed to fetch the Git repository"
+            overall_result=1
+            exit 1
+        fi
         # Keep relative path as in original implementation for backward compatibility
         file_path="$relative_path/${*:$OPTIND:1}"
     else

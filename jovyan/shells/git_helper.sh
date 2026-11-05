@@ -59,6 +59,11 @@ prepare_git_global_config() {
     fi
 }
 
+quote_shell_argument() {
+    local value=${1//\'/\'\\\'\'}
+    printf "'%s'" "$value"
+}
+
 prepare_git_config_files() {
     # Use global git_source_path if provided as argument, otherwise use global variable (backward compatibility)
     local source_path="${1:-$git_source_path}"
@@ -103,8 +108,10 @@ prepare_git_config_files() {
             credentials_file="/tmp/.git-credentials"
         fi
 
+        local quoted_credentials_file
+        quoted_credentials_file=$(quote_shell_argument "$credentials_file")
         if ! git config --global credential.username "$username" ||
-            ! git config --global credential.helper "store --file $credentials_file"; then
+            ! git config --global credential.helper "store --file $quoted_credentials_file"; then
             log_error "Cannot configure Git credentials" path "$GIT_CONFIG_GLOBAL"
             return 1
         fi
