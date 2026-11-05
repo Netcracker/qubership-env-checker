@@ -29,18 +29,45 @@ absolute_path="/home/jovyan/$relative_path"
 #$1 - path to project source notebooks folder
 gitProcess() {
     # Use global variables (backward compatibility)
-    prepare_git_config_files "$git_source_path"
+    prepare_git_config_files "$git_source_path" || return 1
     log_info "Git process started"
-    check_relative_path_is_exists "$git_source_path" "$relative_path" "$absolute_path"
+    if ! check_relative_path_is_exists "$git_source_path" "$relative_path" "$absolute_path"; then
+        log_error "Git process failed"
+        return 1
+    fi
     log_info "Git process finished"
     echo "$relative_path"
+}
+
+prepare_git_global_config() {
+    local config_file
+    if [ -n "${GIT_CONFIG_GLOBAL:-}" ]; then
+        config_file="$GIT_CONFIG_GLOBAL"
+    else
+        config_file="${HOME:-/home/jovyan}/.gitconfig"
+        if { [ -e "$config_file" ] && [ ! -w "$config_file" ]; } ||
+            { [ ! -e "$config_file" ] && [ ! -w "$(dirname "$config_file")" ]; }; then
+            config_file="${TMPDIR:-/tmp}/.gitconfig"
+        fi
+        export GIT_CONFIG_GLOBAL="$config_file"
+    fi
+
+    if { [ -e "$config_file" ] && [ ! -w "$config_file" ]; } ||
+        { [ ! -e "$config_file" ] && [ ! -w "$(dirname "$config_file")" ]; }; then
+        log_error "Git global configuration is not writable" path "$config_file"
+        return 1
+    fi
 }
 
 prepare_git_config_files() {
     # Use global git_source_path if provided as argument, otherwise use global variable (backward compatibility)
     local source_path="${1:-$git_source_path}"
 
-    git config --global http.sslVerify false
+    prepare_git_global_config || return 1
+    if ! git config --global http.sslVerify false; then
+        log_error "Cannot configure Git SSL verification"
+        return 1
+    fi
 
     # Try to get credentials from environment variables first (new method)
     local username="${ENVCHECKER_GIT_USERNAME:-}"
@@ -76,8 +103,11 @@ prepare_git_config_files() {
             credentials_file="/tmp/.git-credentials"
         fi
 
-        git config --global credential.username "$username"
-        git config --global credential.helper "store --file $credentials_file"
+        if ! git config --global credential.username "$username" ||
+            ! git config --global credential.helper "store --file $credentials_file"; then
+            log_error "Cannot configure Git credentials" path "$GIT_CONFIG_GLOBAL"
+            return 1
+        fi
 
         # Get domain from environment variable first
         local git_domain="${ENVCHECKER_GIT_DOMAIN:-}"
@@ -108,9 +138,25 @@ prepare_git_config_files() {
         local auth_url="https://$username:$token@$git_domain"
         log_debug "Git authentication configured" username "$username" git_domain "$git_domain"
 
+        # Create the credential file without group or other access, and secure an existing file
+        # before writing a token to it.
+        if [ ! -e "$credentials_file" ] &&
+            ! (umask 077 && : >"$credentials_file"); then
+            log_error "Cannot create the Git credentials file" path "$credentials_file"
+            return 1
+        fi
+        if [ ! -f "$credentials_file" ]; then
+            log_error "Git credentials path is not a regular file" path "$credentials_file"
+            return 1
+        fi
+        if ! chmod 600 "$credentials_file"; then
+            log_error "Cannot secure the Git credentials file" path "$credentials_file"
+            return 1
+        fi
+
         # Store credentials for Git (once per value, so repeated runs do not grow the file)
         if ! grep -qxF "$auth_url" "$credentials_file" 2>/dev/null; then
-            if ! (umask 077 && echo "$auth_url" >>"$credentials_file"); then
+            if ! echo "$auth_url" >>"$credentials_file"; then
                 log_error "Cannot store Git credentials" path "$credentials_file"
                 return 1
             fi
@@ -123,8 +169,12 @@ prepare_git_config_files() {
 # Marks a directory as safe for Git (once), so a root-owned mount point does not block pull.
 trust_git_directory() {
     local directory=$1
+    prepare_git_global_config || return 1
     if ! git config --global --get-all safe.directory | grep -qxF "$directory"; then
-        git config --global --add safe.directory "$directory"
+        if ! git config --global --add safe.directory "$directory"; then
+            log_error "Cannot configure Git safe.directory" path "$directory"
+            return 1
+        fi
     fi
 }
 
@@ -141,7 +191,7 @@ check_relative_path_is_exists() {
 
     # A mounted volume root is usually owned by root while Git runs as another user, and Git
     # refuses to work in such a repository ("dubious ownership") on every run after the clone.
-    trust_git_directory "$absolute_path"
+    trust_git_directory "$absolute_path" || return 1
 
     # A directory alone is not a repository: in Kubernetes the path is an emptyDir mount that
     # exists before the first clone, so pull only when there is a .git inside.
@@ -156,15 +206,17 @@ check_relative_path_is_exists() {
 
 run_git_checkout() {
     # Use global variables (backward compatibility)
-    mkdir -p "$absolute_path"
+    if ! mkdir -p "$absolute_path"; then
+        log_error "Cannot create the Git checkout directory" path "$absolute_path"
+        return 1
+    fi
     if [ -z "$(ls -A "$absolute_path" 2>/dev/null)" ]; then
         # git clone accepts an existing empty directory (for example a volume mount).
         log_command git clone "$git_source_path" "$absolute_path"
     else
-        # Existing content that is not a repository: turn it into one in place, then sync.
-        log_warn "Directory is not empty and is not a Git repository; initializing it in place" path "$absolute_path"
-        log_command git -C "$absolute_path" init || return 1
-        run_git_pull
+        # Do not overwrite files in a directory that Git does not manage.
+        log_error "Directory is not empty and is not a Git repository" path "$absolute_path"
+        return 1
     fi
 }
 
@@ -189,13 +241,23 @@ resolve_remote_branch() {
 
 run_git_pull() {
     # Use global variables (backward compatibility)
-    cd "$absolute_path" || exit
+    if ! cd "$absolute_path"; then
+        log_error "Cannot enter the Git checkout directory" path "$absolute_path"
+        return 1
+    fi
     #Checks if there is a connection with the remote repository, if not - establishes a connection
     if [[ "$(git remote)" == "" ]]; then
-        git remote add origin "$git_source_path"
+        if ! git remote add origin "$git_source_path"; then
+            log_error "Cannot configure the Git remote" remote "origin"
+            cd ~ || return 1
+            return 1
+        fi
     fi
     #Updates the origin branch from the server and downloads all changes.
-    log_command git fetch origin || { cd ~ || exit; return 1; }
+    log_command git fetch origin || {
+        cd ~ || exit
+        return 1
+    }
     #Resets the state of the local branch to the remote default branch, ignoring all local changes
     local remote_branch
     remote_branch=$(resolve_remote_branch)
@@ -205,7 +267,10 @@ run_git_pull() {
         return 1
     fi
     log_info "Resetting to the remote branch" branch "$remote_branch"
-    log_command git reset --hard "$remote_branch"
+    if ! log_command git reset --hard "$remote_branch"; then
+        cd ~ || return 1
+        return 1
+    fi
     cd ~ || exit
 }
 
