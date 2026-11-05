@@ -41,7 +41,7 @@ gitProcess() {
 
 git_config_path_is_writable() {
     local path=$1
-    { [ -e "$path" ] && [ -w "$path" ]; } ||
+    { [ -e "$path" ] && [ -w "$path" ] && [ -w "$(dirname "$path")" ]; } ||
         { [ ! -e "$path" ] && [ -w "$(dirname "$path")" ]; }
 }
 
@@ -64,6 +64,7 @@ include_existing_git_config() {
 prepare_git_global_config() {
     local home="${HOME:-/home/jovyan}"
     local home_config="$home/.gitconfig"
+    local xdg_config="${XDG_CONFIG_HOME:-$home/.config}/git/config"
 
     if [ -n "${GIT_CONFIG_GLOBAL:-}" ]; then
         if ! git_config_path_is_writable "$GIT_CONFIG_GLOBAL"; then
@@ -73,20 +74,29 @@ prepare_git_global_config() {
         return 0
     fi
 
-    # Keep Git's native global-config search when ~/.gitconfig is writable. This preserves
-    # settings from both $XDG_CONFIG_HOME/git/config and ~/.gitconfig.
-    if git_config_path_is_writable "$home_config"; then
+    # Git writes to ~/.gitconfig when it exists, then to the XDG config when only that file
+    # exists, and otherwise creates ~/.gitconfig. Keep the native search when that destination
+    # is writable.
+    local native_destination="$home_config"
+    if [ ! -e "$home_config" ] && [ -e "$xdg_config" ]; then
+        native_destination="$xdg_config"
+    fi
+    if git_config_path_is_writable "$native_destination"; then
         return 0
     fi
 
-    local config_file="${TMPDIR:-/tmp}/.gitconfig"
+    # Prefer ~/.gitconfig when its directory is writable. Exporting it makes Git write there
+    # instead of trying to lock a read-only XDG config.
+    local config_file="$home_config"
+    if ! git_config_path_is_writable "$config_file"; then
+        config_file="${TMPDIR:-/tmp}/.gitconfig"
+    fi
     if ! git_config_path_is_writable "$config_file"; then
         log_error "Git global configuration is not writable" path "$config_file"
         return 1
     fi
     export GIT_CONFIG_GLOBAL="$config_file"
 
-    local xdg_config="${XDG_CONFIG_HOME:-$home/.config}/git/config"
     include_existing_git_config "$config_file" "$xdg_config" || return 1
     include_existing_git_config "$config_file" "$home_config" || return 1
 }
@@ -228,14 +238,13 @@ check_relative_path_is_exists() {
         log_debug "Git repository URL" repo_url "$debug_url"
     fi
 
-    # A mounted volume root is usually owned by root while Git runs as another user, and Git
-    # refuses to work in such a repository ("dubious ownership") on every run after the clone.
-    trust_git_directory "$absolute_path" || return 1
-
     # A directory alone is not a repository: in Kubernetes the path is an emptyDir mount that
     # exists before the first clone. A checkout can have a .git directory or a .git file that
     # points to metadata elsewhere.
     if [ -d "$absolute_path/.git" ] || [ -f "$absolute_path/.git" ]; then
+        # A mounted volume root is usually owned by root while Git runs as another user. Trust
+        # only paths that already contain Git metadata.
+        trust_git_directory "$absolute_path" || return 1
         log_info "Repository exists; running the pull operation" path "$absolute_path"
         run_git_pull
     else
@@ -264,10 +273,6 @@ run_git_checkout() {
 resolve_remote_branch() {
     local branch
     branch=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)
-    if [ -z "$branch" ]; then
-        git remote set-head origin --auto >/dev/null 2>&1
-        branch=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)
-    fi
     if [ -z "$branch" ]; then
         for candidate in origin/main origin/master; do
             if git rev-parse --verify --quiet "$candidate" >/dev/null; then
@@ -298,6 +303,12 @@ run_git_pull() {
         cd ~ || exit
         return 1
     }
+    # Refresh origin/HEAD in case the remote default branch changed after the initial clone.
+    # Remove a stale value when the remote does not advertise its default branch, so the
+    # main/master fallbacks can take effect.
+    if ! git remote set-head origin --auto >/dev/null 2>&1; then
+        git symbolic-ref --delete refs/remotes/origin/HEAD >/dev/null 2>&1 || true
+    fi
     #Resets the state of the local branch to the remote default branch, ignoring all local changes
     local remote_branch
     remote_branch=$(resolve_remote_branch)
