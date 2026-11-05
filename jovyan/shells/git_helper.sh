@@ -39,24 +39,56 @@ gitProcess() {
     echo "$relative_path"
 }
 
+git_config_path_is_writable() {
+    local path=$1
+    { [ -e "$path" ] && [ -w "$path" ]; } ||
+        { [ ! -e "$path" ] && [ -w "$(dirname "$path")" ]; }
+}
+
+include_existing_git_config() {
+    local destination=$1
+    local source=$2
+    if [ ! -f "$source" ] || [ "$source" = "$destination" ]; then
+        return 0
+    fi
+    if git config --file "$destination" --get-all include.path 2>/dev/null |
+        grep -qxF "$source"; then
+        return 0
+    fi
+    if ! git config --file "$destination" --add include.path "$source"; then
+        log_error "Cannot preserve the existing Git configuration" path "$source"
+        return 1
+    fi
+}
+
 prepare_git_global_config() {
-    local config_file
+    local home="${HOME:-/home/jovyan}"
+    local home_config="$home/.gitconfig"
+
     if [ -n "${GIT_CONFIG_GLOBAL:-}" ]; then
-        config_file="$GIT_CONFIG_GLOBAL"
-    else
-        config_file="${HOME:-/home/jovyan}/.gitconfig"
-        if { [ -e "$config_file" ] && [ ! -w "$config_file" ]; } ||
-            { [ ! -e "$config_file" ] && [ ! -w "$(dirname "$config_file")" ]; }; then
-            config_file="${TMPDIR:-/tmp}/.gitconfig"
+        if ! git_config_path_is_writable "$GIT_CONFIG_GLOBAL"; then
+            log_error "Git global configuration is not writable" path "$GIT_CONFIG_GLOBAL"
+            return 1
         fi
-        export GIT_CONFIG_GLOBAL="$config_file"
+        return 0
     fi
 
-    if { [ -e "$config_file" ] && [ ! -w "$config_file" ]; } ||
-        { [ ! -e "$config_file" ] && [ ! -w "$(dirname "$config_file")" ]; }; then
+    # Keep Git's native global-config search when ~/.gitconfig is writable. This preserves
+    # settings from both $XDG_CONFIG_HOME/git/config and ~/.gitconfig.
+    if git_config_path_is_writable "$home_config"; then
+        return 0
+    fi
+
+    local config_file="${TMPDIR:-/tmp}/.gitconfig"
+    if ! git_config_path_is_writable "$config_file"; then
         log_error "Git global configuration is not writable" path "$config_file"
         return 1
     fi
+    export GIT_CONFIG_GLOBAL="$config_file"
+
+    local xdg_config="${XDG_CONFIG_HOME:-$home/.config}/git/config"
+    include_existing_git_config "$config_file" "$xdg_config" || return 1
+    include_existing_git_config "$config_file" "$home_config" || return 1
 }
 
 quote_shell_argument() {
@@ -112,7 +144,7 @@ prepare_git_config_files() {
         quoted_credentials_file=$(quote_shell_argument "$credentials_file")
         if ! git config --global credential.username "$username" ||
             ! git config --global credential.helper "store --file $quoted_credentials_file"; then
-            log_error "Cannot configure Git credentials" path "$GIT_CONFIG_GLOBAL"
+            log_error "Cannot configure Git credentials" path "${GIT_CONFIG_GLOBAL:-$HOME/.gitconfig}"
             return 1
         fi
 
