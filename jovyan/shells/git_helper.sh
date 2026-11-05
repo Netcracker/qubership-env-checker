@@ -304,10 +304,10 @@ run_git_pull() {
         return 1
     }
     # Refresh origin/HEAD in case the remote default branch changed after the initial clone.
-    # Remove a stale value when the remote does not advertise its default branch, so the
-    # main/master fallbacks can take effect.
+    # Preserve the last known value when the refresh fails; choosing another branch without
+    # reliable remote information could run the wrong notebooks.
     if ! git remote set-head origin --auto >/dev/null 2>&1; then
-        git symbolic-ref --delete refs/remotes/origin/HEAD >/dev/null 2>&1 || true
+        log_warn "Cannot refresh the remote default branch; using the cached value" remote "origin"
     fi
     #Resets the state of the local branch to the remote default branch, ignoring all local changes
     local remote_branch
