@@ -144,6 +144,14 @@ prepare_git_config_files() {
     if [ -n "$username" ] && [ -n "$token" ]; then
         # With a read-only root filesystem $HOME is not writable, so fall back to /tmp.
         local credentials_file="${GIT_CREDENTIALS_FILE:-$HOME/.git-credentials}"
+        if [[ "$credentials_file" != /* ]]; then
+            local credentials_base
+            if ! credentials_base=$(pwd -P); then
+                log_error "Cannot resolve the Git credentials path" path "$credentials_file"
+                return 1
+            fi
+            credentials_file="$credentials_base/$credentials_file"
+        fi
         if [ -e "$credentials_file" ] && [ ! -w "$credentials_file" ]; then
             credentials_file="/tmp/.git-credentials"
         elif [ ! -e "$credentials_file" ] && [ ! -w "$(dirname "$credentials_file")" ]; then
