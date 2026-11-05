@@ -201,8 +201,9 @@ check_relative_path_is_exists() {
     trust_git_directory "$absolute_path" || return 1
 
     # A directory alone is not a repository: in Kubernetes the path is an emptyDir mount that
-    # exists before the first clone, so pull only when there is a .git inside.
-    if [ -d "$absolute_path/.git" ]; then
+    # exists before the first clone. A checkout can have a .git directory or a .git file that
+    # points to metadata elsewhere.
+    if [ -d "$absolute_path/.git" ] || [ -f "$absolute_path/.git" ]; then
         log_info "Repository exists; running the pull operation" path "$absolute_path"
         run_git_pull
     else
