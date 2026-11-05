@@ -68,8 +68,16 @@ prepare_git_config_files() {
 
     # If we have credentials, configure Git
     if [ -n "$username" ] && [ -n "$token" ]; then
+        # With a read-only root filesystem $HOME is not writable, so fall back to /tmp.
+        local credentials_file="${GIT_CREDENTIALS_FILE:-$HOME/.git-credentials}"
+        if [ -e "$credentials_file" ] && [ ! -w "$credentials_file" ]; then
+            credentials_file="/tmp/.git-credentials"
+        elif [ ! -e "$credentials_file" ] && [ ! -w "$(dirname "$credentials_file")" ]; then
+            credentials_file="/tmp/.git-credentials"
+        fi
+
         git config --global credential.username "$username"
-        git config --global credential.helper 'store --file ~/.git-credentials'
+        git config --global credential.helper "store --file $credentials_file"
 
         # Get domain from environment variable first
         local git_domain="${ENVCHECKER_GIT_DOMAIN:-}"
@@ -100,10 +108,23 @@ prepare_git_config_files() {
         local auth_url="https://$username:$token@$git_domain"
         log_debug "Git authentication configured" username "$username" git_domain "$git_domain"
 
-        # Store credentials for Git
-        echo "$auth_url" >>~/.git-credentials
+        # Store credentials for Git (once per value, so repeated runs do not grow the file)
+        if ! grep -qxF "$auth_url" "$credentials_file" 2>/dev/null; then
+            if ! (umask 077 && echo "$auth_url" >>"$credentials_file"); then
+                log_error "Cannot store Git credentials" path "$credentials_file"
+                return 1
+            fi
+        fi
     else
         log_warn "No Git credentials found" sources_checked "ENVCHECKER_GIT_USERNAME/ENVCHECKER_GIT_TOKEN, /etc/git/git-user, /etc/git/git-token"
+    fi
+}
+
+# Marks a directory as safe for Git (once), so a root-owned mount point does not block pull.
+trust_git_directory() {
+    local directory=$1
+    if ! git config --global --get-all safe.directory | grep -qxF "$directory"; then
+        git config --global --add safe.directory "$directory"
     fi
 }
 
@@ -118,19 +139,52 @@ check_relative_path_is_exists() {
         log_debug "Git repository URL" repo_url "$debug_url"
     fi
 
-    if [ -d "/home/jovyan/$relative_path" ]; then
-        log_info "Path exists; running the pull operation" path "/home/jovyan/$relative_path"
+    # A mounted volume root is usually owned by root while Git runs as another user, and Git
+    # refuses to work in such a repository ("dubious ownership") on every run after the clone.
+    trust_git_directory "$absolute_path"
+
+    # A directory alone is not a repository: in Kubernetes the path is an emptyDir mount that
+    # exists before the first clone, so pull only when there is a .git inside.
+    if [ -d "$absolute_path/.git" ]; then
+        log_info "Repository exists; running the pull operation" path "$absolute_path"
         run_git_pull
     else
-        log_info "Path does not exist; running the checkout operation" path "/home/jovyan/$relative_path"
+        log_info "Repository does not exist; running the checkout operation" path "$absolute_path"
         run_git_checkout
     fi
 }
 
 run_git_checkout() {
     # Use global variables (backward compatibility)
-    mkdir -p "$relative_path"
-    log_command git clone "$git_source_path" "$absolute_path"
+    mkdir -p "$absolute_path"
+    if [ -z "$(ls -A "$absolute_path" 2>/dev/null)" ]; then
+        # git clone accepts an existing empty directory (for example a volume mount).
+        log_command git clone "$git_source_path" "$absolute_path"
+    else
+        # Existing content that is not a repository: turn it into one in place, then sync.
+        log_warn "Directory is not empty and is not a Git repository; initializing it in place" path "$absolute_path"
+        log_command git -C "$absolute_path" init || return 1
+        run_git_pull
+    fi
+}
+
+# Prints the remote branch to sync with: origin/HEAD, then origin/main, then origin/master.
+resolve_remote_branch() {
+    local branch
+    branch=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)
+    if [ -z "$branch" ]; then
+        git remote set-head origin --auto >/dev/null 2>&1
+        branch=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)
+    fi
+    if [ -z "$branch" ]; then
+        for candidate in origin/main origin/master; do
+            if git rev-parse --verify --quiet "$candidate" >/dev/null; then
+                branch="$candidate"
+                break
+            fi
+        done
+    fi
+    echo "$branch"
 }
 
 run_git_pull() {
@@ -141,9 +195,17 @@ run_git_pull() {
         git remote add origin "$git_source_path"
     fi
     #Updates the origin branch from the server and downloads all changes.
-    log_command git fetch origin
-    #Resets the state of the local branch to the state of the remote branch origin/master, ignoring all local changes
-    log_command git reset --hard origin/master
+    log_command git fetch origin || { cd ~ || exit; return 1; }
+    #Resets the state of the local branch to the remote default branch, ignoring all local changes
+    local remote_branch
+    remote_branch=$(resolve_remote_branch)
+    if [ -z "$remote_branch" ]; then
+        log_error "Cannot determine the remote branch" repo "$absolute_path"
+        cd ~ || exit
+        return 1
+    fi
+    log_info "Resetting to the remote branch" branch "$remote_branch"
+    log_command git reset --hard "$remote_branch"
     cd ~ || exit
 }
 
