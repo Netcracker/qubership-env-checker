@@ -209,10 +209,10 @@ prepare_git_config_files() {
             return 1
         fi
 
-        # Use the configured helper so a changed token replaces the previous credential.
+        # Call credential-store directly because git credential approve ignores helper failures.
         if ! printf 'protocol=https\nhost=%s\nusername=%s\npassword=%s\n\n' \
             "$git_domain" "$username" "$token" |
-            git credential approve; then
+            git credential-store --file "$credentials_file" store; then
             log_error "Cannot store Git credentials" path "$credentials_file"
             return 1
         fi
