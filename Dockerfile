@@ -222,6 +222,8 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update --yes && \
 # Cleanup temporary files
 WORKDIR /tmp
 RUN mamba install --override-channels -c conda-forge --yes \
+    'mamba' \
+    'conda' \
         'traitlets<5.10' \
         'notebook' \
         "jupyterlab-lsp=${JUPYTERLAB_LSP_VERSION}" \
@@ -310,6 +312,8 @@ RUN set -x && \
 #   urllib3 - low-level HTTP client
 #   widgetsnbextension: Jupyter Notebook extension that enables interactive widgets in notebook cells (sliders, buttons, text boxes).
 RUN mamba install --override-channels -c conda-forge --yes \
+    'mamba' \
+    'conda' \
     'aiohttp>=3.9.2' \
     'beautifulsoup4' \
     'boto3' \
