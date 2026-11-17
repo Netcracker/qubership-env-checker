@@ -3,7 +3,7 @@ name: "Link Checker"
 
 on:
   push:
-    branches: [main, release-1.0.4]
+    branches: [main, 'release-*']
     tags: ['**']
   repository_dispatch: null
   workflow_dispatch: null
