@@ -27,7 +27,8 @@ on:
         description: "Symbol to replace in tags"
   push:
     branches:
-    - '**'
+    - main
+    - 'release-*'
     paths-ignore:
     - '**'
     - '!.github/**'
