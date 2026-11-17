@@ -14,7 +14,7 @@ ARG YQ_VERSION=v4.54.1
 # renovate: datasource=conda depName=nodejs
 ARG NODEJS_VERSION=26.13.0
 # renovate: datasource=conda depName=jupyterlab
-ARG JUPYTERLAB_VERSION=4.6.5
+ARG JUPYTERLAB_VERSION=4.6.6
 # renovate: datasource=conda depName=jupyterlab-lsp
 ARG JUPYTERLAB_LSP_VERSION=5.3.0
 # renovate: datasource=conda depName=jupyter-lsp
