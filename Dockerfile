@@ -222,8 +222,8 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update --yes && \
 # Cleanup temporary files
 WORKDIR /tmp
 RUN mamba install --override-channels -c conda-forge --yes \
-    'mamba' \
-    'conda' \
+        'mamba' \
+        'conda' \
         'traitlets<5.10' \
         'notebook' \
         "jupyterlab-lsp=${JUPYTERLAB_LSP_VERSION}" \
